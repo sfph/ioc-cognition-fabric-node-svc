@@ -9,14 +9,9 @@ ENV POETRY_VERSION=2.1.4 \
     PYTHONUNBUFFERED=1 \
     PATH="/root/.local/bin:$PATH"
 
-# Build-time git metadata
-ARG GIT_COMMIT_SHA=unknown
-ARG GIT_COMMIT_TIME=unknown
-ARG GIT_BRANCH=unknown
-
-ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA} \
-    GIT_COMMIT_TIME=${GIT_COMMIT_TIME} \
-    GIT_BRANCH=${GIT_BRANCH}
+ARG GIT_COMMIT_SHA
+ARG GIT_COMMIT_TIME
+ARG GIT_BRANCH
 
 WORKDIR /app
 
@@ -38,6 +33,15 @@ RUN poetry install --no-interaction --no-ansi --without dev
 # Runtime stage
 # =========================
 FROM python:3.11-slim
+
+# Build-time git metadata
+ARG GIT_COMMIT_SHA=unknown
+ARG GIT_COMMIT_TIME=unknown
+ARG GIT_BRANCH=unknown
+
+ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA} \
+    GIT_COMMIT_TIME=${GIT_COMMIT_TIME} \
+    GIT_BRANCH=${GIT_BRANCH}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

@@ -137,8 +137,8 @@ jobs:
       build-args: >
         --no-cache
         --build-arg GIT_COMMIT_SHA=${{ github.sha }}
-        --build-arg GIT_COMMIT_TIME=${{ github.event.head_commit.timestamp }}
-        --build-arg GIT_BRANCH=${{ github.ref_name }}
+        --build-arg GIT_COMMIT_TIME=${{ github.event.head_commit.timestamp || github.run_started_at }}
+        --build-arg GIT_BRANCH=${{ github.head_ref || github.ref_name }}
 
   ################################## Send Status for PR Checks ###########################
   ########################################################################################
