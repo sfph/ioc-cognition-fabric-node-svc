@@ -18,13 +18,39 @@ def test_health_endpoint():
     assert data["version"] == get_app_version()
 
 
-def test_logger_endpoint():
+def test_loglevel_endpoint():
     app = create_app()
     client = TestClient(app)
 
-    response = client.get("/api/internal/diagnostics/logger")
+    response = client.get("/api/internal/diagnostics/log-level")
 
     assert response.status_code == 200
     data = response.json()
 
+    assert "log_level" in data
     assert data["log_level"] == "INFO"
+
+
+def test_loglevels_endpoint():
+    app = create_app()
+    client = TestClient(app)
+
+    response = client.get("/api/internal/diagnostics/log-levels")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "supported_log_levels" in data
+    assert len(data["supported_log_levels"]) == 5
+
+    supported = set(data["supported_log_levels"])
+
+    expected_levels = {
+        "DEBUG",
+        "INFO",
+        "WARN",
+        "ERROR",
+        "CRITICAL",
+    }
+
+    assert supported == expected_levels

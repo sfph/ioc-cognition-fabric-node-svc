@@ -11,23 +11,25 @@ import os
 import tomllib
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Set
 
-# Valid log levels for IoC CFN Management Backend Service
-VALID_LOG_LEVELS = [
+# Valid log levels for IoC CFN Service
+SUPPORTED_LOG_LEVELS: Set[str] = {
     "DEBUG",
     "INFO",
-    "WARNING",
     "WARN",
     "ERROR",
     "CRITICAL",
-    "TRACE",
-]
+}
 
-# Mapping of IoC CFN Management Backend Service log levels to Python logging levels
+
+# Mapping of IoC CFN log levels to Python logging levels
 LOG_LEVEL_MAP = {
-    "TRACE": "DEBUG",  # Map TRACE to DEBUG for Python logging
-    "WARN": "WARNING",  # Map WARN to WARNING for consistency
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARN": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
 }
 
 
@@ -97,19 +99,19 @@ def setup_logging(service_name: str, default_level: str = "INFO") -> None:
         default_level: Default log level (default: INFO)
     """
     # Get log level from environment or use default
-    log_level = os.environ.get("LOG_LEVEL", default_level).upper()
+    env_level = os.environ.get("LOG_LEVEL", default_level).upper()
+    if env_level not in LOG_LEVEL_MAP:
+        env_level = default_level.upper()
+    python_level = LOG_LEVEL_MAP[env_level]
 
     app_version = os.environ.get("APPLICATION_VERSION") or get_version_from_pyproject()
-
-    # Map log level if needed
-    log_level = LOG_LEVEL_MAP.get(log_level, log_level)
 
     # Configure basic logging
     handler = logging.StreamHandler()
     handler.setFormatter(JsonFormatter(service_name, app_version))
 
     root = logging.getLogger()
-    root.setLevel(getattr(logging, log_level, logging.INFO))
+    root.setLevel(python_level)
     root.handlers = [handler]
 
 
@@ -148,47 +150,31 @@ def validate_log_level(log_level: str) -> Tuple[bool, Optional[str], Optional[st
     log_level_upper = log_level.upper()
 
     # Check if it's a valid IoC CFN Management Backend Service log level
-    if log_level_upper not in VALID_LOG_LEVELS:
+    if log_level_upper not in SUPPORTED_LOG_LEVELS:
         return False, None, f"Invalid log level: {log_level}"
 
-    # Map to Python logging level
-    normalized_level = LOG_LEVEL_MAP.get(log_level_upper, log_level_upper)
-
     # Verify it's a valid Python logging level
-    if not hasattr(logging, normalized_level):
-        return False, None, f"Invalid Python log level: {normalized_level}"
+    if log_level_upper not in LOG_LEVEL_MAP:
+        return False, None, f"Invalid log level: {log_level}"
 
-    return True, normalized_level, None
+    return True, None
 
 
 def update_log_level(module_name: str, log_level: str) -> Tuple[bool, Optional[str]]:
-    """
-    Update the log level for a specific module or the root logger.
+    log_level_upper = log_level.upper()
 
-    Args:
-        module_name: Name of the module (use "ROOT" or empty string for root logger)
-        log_level: The log level to set
+    if log_level_upper not in LOG_LEVEL_MAP:
+        return False, f"Invalid log level: {log_level}"
 
-    Returns:
-        Tuple of (success, error_message)
-    """
-    # Validate log level
-    is_valid, normalized_level, error_msg = validate_log_level(log_level)
-    if not is_valid:
-        return False, error_msg
+    python_level = LOG_LEVEL_MAP[log_level_upper]
 
-    # At this point, normalized_level is guaranteed to be a string (not None)
-    assert normalized_level is not None
-
-    # Set log level
     if module_name in ("ROOT", ""):
-        # Set root logger level
-        logging.getLogger().setLevel(getattr(logging, normalized_level))
-        logging.info(f"Root logger level set to {normalized_level}")
+        logging.getLogger().setLevel(python_level)
+        logging.info("Root logger level set to %s", log_level_upper)
     else:
-        # Set specific module logger level
         logger = logging.getLogger(module_name)
-        logger.setLevel(getattr(logging, normalized_level))
-        logging.info(f"Logger '{module_name}' level set to {normalized_level}")
+        logger.setLevel(python_level)
+        logging.info("Logger '%s' level set to %s", module_name, log_level_upper)
 
     return True, None
+
