@@ -54,3 +54,33 @@ def test_loglevels_endpoint():
     }
 
     assert supported == expected_levels
+
+
+def test_update_log_level_endpoint():
+    app = create_app()
+    client = TestClient(app)
+
+    payload = {
+        "module": "ROOT",
+        "level": "DEBUG",
+    }
+
+    response = client.post(
+        "/api/internal/diagnostics/log-level",
+        json=payload,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    # Response contract
+    assert data["module"] == "ROOT"
+    assert data["level"] == "DEBUG"
+    assert "supported_levels" in data
+    assert "root_level" in data
+
+    # Root logger actually changed
+    assert data["root_level"] == "DEBUG"
+
+    test_loglevel_endpoint()
