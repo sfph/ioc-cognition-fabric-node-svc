@@ -33,7 +33,7 @@ async def log_level():
 
 @router.get("/internal/diagnostics/log-levels")
 async def log_levels():
-    return {"supported_log_levels": get_supported_log_levels}
+    return {"supported_log_levels": get_supported_log_levels()}
 
 
 class LogLevelUpdateRequest(BaseModel):
