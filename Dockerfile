@@ -1,7 +1,7 @@
 # =========================
 # Build stage
 # =========================
-FROM python:3.13-slim AS builder
+FROM python:3.11-slim AS builder
 
 ENV POETRY_VERSION=1.8.2 \
     POETRY_VIRTUALENVS_CREATE=false \
@@ -27,7 +27,7 @@ RUN poetry install --no-interaction --no-ansi --only main
 # =========================
 # Runtime stage
 # =========================
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

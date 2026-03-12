@@ -19,10 +19,10 @@ help:
 	@echo "  make clean       Remove cache and build artifacts"
 
 install:
-	$(POETRY) install
+	$(POETRY) install --no-root
 
 run:
-	$(POETRY) run python src/app/main.py
+	$(POETRY) run python -m src.app.main
 
 run-dev:
 	$(POETRY) run uvicorn $(APP_MODULE) --host 0.0.0.0 --port $(PORT) --reload
