@@ -6,7 +6,7 @@ IoC Cognition Fabric Node Service in Python.
 
 ## Prerequisites
 
-- Python **3.13+**
+- Python **3.11+**
 - [Poetry](https://python-poetry.org/docs/#installation)
 - Docker (optional)
 - [IOC Management Plane Service](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc) is running and reachable
