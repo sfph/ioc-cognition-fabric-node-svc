@@ -10,6 +10,8 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+DISABLE_REGISTRATION = os.getenv("DISABLE_REGISTRATION", "").lower() == "true"
+
 # ----------------------------
 # Global CFN State
 # ----------------------------
@@ -143,6 +145,10 @@ async def register_on_startup(
     """
     Registers this CFN with the management plane and starts heartbeat.
     """
+    if DISABLE_REGISTRATION:
+        logger.info("Service registration disabled (test mode)")
+        return
+
     global CfnID, CfnConfig, CfnTimestamp
 
     mgmt_url = os.environ.get("MGMT_URL", "http://localhost:9000")
