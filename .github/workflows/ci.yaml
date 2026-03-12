@@ -132,7 +132,7 @@ jobs:
       dockerfile: Dockerfile
       ### REQUIRED
       ecr-enabled: false
-      ghcr-enabled: true
+      ghcr-enabled: ${{ github.ref == 'refs/heads/main' }} # only push on main
       ghcr-org-registry: ${{ vars.GHCR_REGISTRY }}
       build-args: >
         --no-cache
