@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
@@ -10,24 +11,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.app.api.router import router as api_router
 
 from dotenv import load_dotenv
+
+from src.app.registration import register_on_startup
 from src.app.utils.utils import REPO_ROOT, service_name, get_app_version
 from src.logger.logger import setup_logging
+
+stop_event = asyncio.Event()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
 
     # ---- Startup logic ----
-    logger.info(
-        "Starting up the '%s' FastAPI app! Version: '%s'",
-        service_name,
-        get_app_version(),
+    logger.info("Starting up '%s'",service_name)
+
+    await register_on_startup(
+        app_port=int(os.environ.get("PORT", 9002)),
+        stop_event=stop_event,
     )
 
     yield
 
     # ---- Shutdown logic ----
     logger.info("Shutting down the '%s' service", service_name)
+    stop_event.set()
 
 
 def create_app() -> FastAPI:
