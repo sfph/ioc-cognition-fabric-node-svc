@@ -83,4 +83,18 @@ def test_update_log_level_endpoint():
     # Root logger actually changed
     assert data["root_level"] == "DEBUG"
 
-    test_loglevel_endpoint()
+
+def test_diagnostics_info_endpoint():
+    app = create_app()
+    client = TestClient(app)
+
+    response = client.get("/api/internal/diagnostics/info")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "git" in data
+    assert "commit" in data["git"]
+    assert "id" in data["git"]["commit"]
+    assert "time" in data["git"]["commit"]
+    assert "branch" in data["git"]
