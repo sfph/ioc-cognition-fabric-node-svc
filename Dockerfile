@@ -35,6 +35,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Create non-root user and group
+RUN groupadd --system app && useradd --system --gid app app
+
 # Copy installed deps
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
@@ -43,6 +46,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY src ./src
 COPY env.conf ./env.conf
 COPY pyproject.toml ./
+
+RUN chown -R app:app /app
+# Switch to non-root user
+USER app
 
 EXPOSE 9002
 
