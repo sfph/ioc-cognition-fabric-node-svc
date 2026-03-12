@@ -18,12 +18,13 @@ from src.logger.logger import setup_logging
 
 stop_event = asyncio.Event()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
 
     # ---- Startup logic ----
-    logger.info("Starting up '%s'",service_name)
+    logger.info("Starting up '%s'", service_name)
 
     await register_on_startup(
         app_port=int(os.environ.get("PORT", 9002)),
@@ -69,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix="/api")
 
     return app
+
 
 app = create_app()
 

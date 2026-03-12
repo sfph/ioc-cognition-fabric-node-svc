@@ -94,8 +94,12 @@ async def start_heartbeat(mgmt_url: str, stop_event: asyncio.Event) -> None:
                             current_ts = CfnTimestamp
 
                         if current_ts:
-                            new_time = datetime.fromisoformat(new_ts.replace("Z", "+00:00"))
-                            cur_time = datetime.fromisoformat(current_ts.replace("Z", "+00:00"))
+                            new_time = datetime.fromisoformat(
+                                new_ts.replace("Z", "+00:00")
+                            )
+                            cur_time = datetime.fromisoformat(
+                                current_ts.replace("Z", "+00:00")
+                            )
 
                             logger.debug(
                                 "heartbeat response: mgmt=%s local=%s",
@@ -126,6 +130,7 @@ async def start_heartbeat(mgmt_url: str, stop_event: asyncio.Event) -> None:
                 continue
 
     logger.info("stopping heartbeat")
+
 
 # ----------------------------
 # Registration to Management Plane

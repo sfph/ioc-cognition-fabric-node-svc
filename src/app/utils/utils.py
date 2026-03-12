@@ -39,6 +39,7 @@ def get_app_version() -> str:
     except Exception:
         return "0.0.0"
 
+
 # Module-level constant for repository root
 REPO_ROOT = get_repo_root()
 

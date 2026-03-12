@@ -11,7 +11,8 @@ router = APIRouter(tags=[""])
     summary="Get diagnostics information",
     description="Returns git build information for this service",
 )
-async def diagnostics_info():    return {
+async def diagnostics_info():
+    return {
         "git": {
             "commit": {
                 "time": os.environ.get("GIT_COMMIT_TIME", "unknown"),

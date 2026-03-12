@@ -16,6 +16,7 @@ def get_current_root_log_level() -> str:
     """
     return logging.getLevelName(logging.getLogger().getEffectiveLevel()).upper()
 
+
 def get_supported_log_levels() -> Set[str]:
     """
     Return supported external log levels.
@@ -32,9 +33,8 @@ async def log_level():
 
 @router.get("/internal/diagnostics/log-levels")
 async def log_levels():
-    return {
-        "supported_log_levels": get_supported_log_levels
-    }
+    return {"supported_log_levels": get_supported_log_levels}
+
 
 class LogLevelUpdateRequest(BaseModel):
     module: str = Field(
@@ -47,6 +47,7 @@ class LogLevelUpdateRequest(BaseModel):
         description="Desired log level",
         examples=["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"],
     )
+
 
 class LogLevelUpdateResponse(BaseModel):
     module: str

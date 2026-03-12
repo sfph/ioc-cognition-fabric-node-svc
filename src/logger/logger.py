@@ -177,4 +177,3 @@ def update_log_level(module_name: str, log_level: str) -> Tuple[bool, Optional[s
         logging.info("Logger '%s' level set to %s", module_name, log_level_upper)
 
     return True, None
-

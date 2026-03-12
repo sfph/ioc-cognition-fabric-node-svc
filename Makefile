@@ -21,6 +21,9 @@ help:
 install:
 	$(POETRY) install --no-root
 
+lint:
+	./scripts/lint.sh
+
 run:
 	$(POETRY) run python -m src.app.main
 
