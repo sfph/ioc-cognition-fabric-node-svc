@@ -39,7 +39,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     # Load env first
-    load_dotenv(dotenv_path=f"{REPO_ROOT}/env.conf", override=True)
+    if os.environ.get("ENV", "").lower() != "prod":
+        load_dotenv(dotenv_path=f"{REPO_ROOT}/env.conf", override=False)
 
     # Configure logging once
     setup_logging(service_name)

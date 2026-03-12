@@ -3,10 +3,11 @@
 # =========================
 FROM python:3.11-slim AS builder
 
-ENV POETRY_VERSION=1.8.2 \
+ENV POETRY_VERSION=2.1.4 \
     POETRY_VIRTUALENVS_CREATE=false \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 
@@ -21,7 +22,7 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 COPY pyproject.toml poetry.lock* ./
 
 # Install dependencies (no dev deps)
-RUN poetry install --no-interaction --no-ansi --only main
+RUN poetry install --no-interaction --no-ansi --without dev
 
 
 # =========================
@@ -35,12 +36,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Copy installed deps
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy app source
 COPY src ./src
 COPY env.conf ./env.conf
+COPY pyproject.toml ./
 
 EXPOSE 9002
 
