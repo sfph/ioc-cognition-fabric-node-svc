@@ -19,6 +19,8 @@ poetry --version
 
 ##  Install Dependencies
 
+**First-time setup:** This project uses internal packages from Cisco Artifactory. See [ARTIFACTORY_INSTALLATION_GUIDE.md](ARTIFACTORY_INSTALLATION_GUIDE.md) for credential setup.
+
 From the repository root:
 
 ```bash
@@ -48,9 +50,16 @@ make run
 
 ### With Docker
 
+Build with Artifactory credentials:
+
 ```bash
-docker build -t ioc-cfn:test
+docker build \
+  --build-arg ARTIFACTORY_USER=YOUR_USERNAME \
+  --build-arg ARTIFACTORY_TOKEN=YOUR_TOKEN \
+  -t ioc-cfn:test .
 ```
+
+See [ARTIFACTORY_INSTALLATION_GUIDE.md](ARTIFACTORY_INSTALLATION_GUIDE.md) for setup details.
 
 If IOC Management Plane service is running on Docker, update the env var:
 ```bash

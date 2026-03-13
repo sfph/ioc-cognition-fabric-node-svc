@@ -94,7 +94,7 @@ jobs:
           poetry config http-basic.outshift-pypi ${{ env.ARTIFACTORY_USER }} ${{ env.ARTIFACTORY_DEVHUB_PYTHON_TOKEN }}
 
       - name: Install system dependencies
-        run: apt-get update && apt-get install -y make libpq-dev gcc
+        run: apt-get update && apt-get install -y make libpq-dev build-essential
 
       - name: Install Dependencies
         run: |
@@ -174,7 +174,7 @@ jobs:
     # This should be an array of ALL active jobs that are used/run
     needs: [
         checkout-unit-tests,
-        call-docker-build-push,
+        docker-build-push,
       ]
     if: always()
     runs-on:
