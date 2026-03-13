@@ -15,11 +15,11 @@ ARG GIT_BRANCH
 
 WORKDIR /app
 
-# Install system deps (added libpq-dev and gcc for psycopg2)
+# Install system deps (added libpq-dev and build-essential for psycopg2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libpq-dev \
-    gcc \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
