@@ -1,0 +1,165 @@
+name: ioc-CFN CI workflow
+
+on:
+  # we want pull requests so we can build(test) but not push to image registry
+  push:
+    branches:
+      - "main"
+
+    # only build when important files change
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '.github/workflows/ci.yaml'
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    branches:
+      - "main"
+
+  workflow_dispatch:
+
+# Grant read access for GITHUB_TOKEN on all jobs
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+  packages: write # needed to push docker image to gar or ecr
+
+jobs:
+  ################################## Code Checkout ##############################
+  ###############################################################################
+  checkout-unit-tests:
+    name: checkout & unit test
+    runs-on:
+      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+    container:
+      image: python:3.11-slim
+      options: --user root
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # The branch, tag or SHA to checkout, otherwise, uses the default branch.
+          ref: ${{ github.ref }}
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: ""
+          # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
+          # Default: true
+          clean: true
+          # Whether to download Git-LFS files
+          # Default: false
+          lfs: ""
+          # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+          # recursively checkout submodules.
+          # Default: false
+          submodules: ""
+
+      ################################## Setup Python & Poetry #######################
+      ###############################################################################
+
+      - name: Check Python version
+        run: |
+          python3 --version || python --version
+
+      - name: Install Poetry
+        run: |
+          python3 -m pip install --upgrade pip || python -m pip install --upgrade pip
+          python3 -m pip install poetry || python -m pip install poetry
+          poetry --version
+
+      ################################## Install Dependencies #######################
+      ###############################################################################
+
+      - name: Setup virtual environment
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - name: Install system dependencies
+        run: apt-get update && apt-get install -y make
+
+      - name: Install Dependencies
+        run: |
+          make install
+
+      ################################## Linting ####################################
+      ###############################################################################
+
+      - name: Run Linting
+        run: |
+          make lint
+
+      ################################## Unit Test ##################################
+      ###############################################################################
+      - name: Run Unit Tests
+        env:
+          DISABLE_REGISTRATION: "true"
+        run: |
+          make test
+
+  #################### Docker build & push ######################
+  ###############################################################################
+  call-docker-build-push:
+    name: Call Docker Build Scan & Push
+    needs: [checkout-unit-tests]
+    uses: cisco-eti/gh-reusable-workflows/.github/workflows/build-push-docker.yaml@production
+
+    secrets:
+      # Only needed if with:ecr-enabled or with:gar-enabled is true below
+      vault-approle-role-id: ${{ secrets.VAULT_APPROLE_ROLE_ID }}
+      vault-approle-secret-id: ${{ secrets.VAULT_APPROLE_SECRET_ID }}
+      # These two secrets are ONLY needed when you are trying to access GAR/GCR in a venture specific project (e.g. 'k8sec-dev' for example).
+      # The values should be consistent with the vault namespace (set by 'VAULT_VENTURE_NAMESPACE' var)
+      # vault-venture-approle-role-id: ${{secrets.VAULT_SECURECN_APPROLE_ROLE_ID}}
+      # vault-venture-approle-secret-id: ${{secrets.VAULT_SECURECN_APPROLE_SECRET_ID}}
+      #######
+      ghcr-username: ${{ secrets.GHCR_USERNAME }}
+      ghcr-token: ${{ secrets.GHCR_TOKEN }}
+      ghcr-org-token: ${{ secrets.GHCR_TOKEN }}
+
+    with:
+      ### REQUIRED
+      runner-group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+      ### Docker image name
+      image-name: "${{ github.event.repository.name }}"
+
+      ### path to where docker should copy files into image
+      ### defaults to root of repository (.)
+      # context: .
+
+      ### Dockerfile alternate name. Default is Dockerfile (relative to context path)
+      dockerfile: Dockerfile
+      ### REQUIRED
+      ecr-enabled: false
+      ghcr-enabled: ${{ github.ref == 'refs/heads/main' }} # only push on main
+      ghcr-org-registry: ${{ vars.GHCR_REGISTRY }}
+      build-args: >
+        --no-cache
+        --build-arg GIT_COMMIT_SHA=${{ github.sha }}
+        --build-arg GIT_COMMIT_TIME=${{ github.event.head_commit.timestamp || github.run_started_at }}
+        --build-arg GIT_BRANCH=${{ github.head_ref || github.ref_name }}
+
+  ################################## Send Status for PR Checks ###########################
+  ########################################################################################
+  # This Job is REQUIRED, it is what allows for the WHOLE workflow to show up in the PR status checks as a requirement for branch rules
+  reusable-workflow-ci-status:
+    name: Reusable Workflow CI Status
+    # This should be an array of ALL active jobs that are used/run
+    needs: [
+        checkout-unit-tests,
+        call-docker-build-push,
+      ]
+    if: always()
+    runs-on:
+      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+    steps:
+      - name: report failure
+        if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+        run: |
+          echo -e "\033[31m*** WORKFLOW FAILED ***\033[0m"
+          exit 1
+      - name: report success
+        run: |
+          echo -e "\033[1;36m*** WORKFLOW SUCCESS ***\033[0m"
+          exit 0
