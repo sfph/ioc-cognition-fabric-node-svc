@@ -15,9 +15,11 @@ ARG GIT_BRANCH
 
 WORKDIR /app
 
-# Install system deps
+# Install system deps (added libpq-dev and build-essential for psycopg2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libpq-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -25,8 +27,13 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 
 COPY pyproject.toml poetry.lock* ./
 
+# Artifactory credentials passed as build args
+ARG ARTIFACTORY_USER
+ARG ARTIFACTORY_TOKEN
+
 # Install dependencies (no dev deps)
-RUN poetry install --no-interaction --no-ansi --without dev
+RUN poetry config http-basic.outshift-pypi "$ARTIFACTORY_USER" "$ARTIFACTORY_TOKEN" && \
+    poetry install --no-interaction --no-ansi --without dev
 
 
 # =========================
