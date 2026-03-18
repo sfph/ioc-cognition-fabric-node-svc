@@ -11,8 +11,9 @@ dependencies = [
     "uvicorn (>=0.24.0,<0.42.0)",
     "fastapi (>=0.104.1,<0.136.0)",
     "dotenv (>=0.9.9,<0.10.0)",
-    "httpx<0.27",
-    "knowledge-memory==0.1.4"
+    "httpx>=0.27",
+    "knowledge-memory==0.1.5.dev20260318010930",
+    "cognition-engine==0.1.0.dev4"
 ]
 
 [[tool.poetry.source]]
