@@ -3,7 +3,7 @@
 # =========================
 FROM python:3.11-slim AS builder
 
-ENV POETRY_VERSION=2.1.4 \
+ENV POETRY_VERSION=2.3.2 \
     POETRY_VIRTUALENVS_CREATE=false \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
