@@ -47,4 +47,4 @@ def get_app_version() -> str:
 # Module-level constant for repository root
 REPO_ROOT = get_repo_root()
 
-service_name = os.environ.get("SERVICE_NAME", "ioc-cognition-fabric-node-svc")
+service_name = os.environ.get("SERVICE_NAME", "ioc-cfn-svc")

@@ -1,0 +1,632 @@
+{
+  "components": {
+    "schemas": {
+      "Concept": {
+        "description": "Represents a concept in the knowledge graph.",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additional attributes for the concept",
+            "title": "Attributes"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Detailed description of the concept",
+            "title": "Description"
+          },
+          "embeddings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmbeddingConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Embedding configuration for the concept"
+          },
+          "id": {
+            "description": "Unique identifier for the concept",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the concept",
+            "title": "Name",
+            "type": "string"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional list of tags for categorization",
+            "title": "Tags"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Concept",
+        "type": "object"
+      },
+      "CreateOrUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Header"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional header of the request."
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ExtractionPayload"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Client-supplied request identifier for tracing and idempotency. If omitted, the service generates a UUID.",
+            "example": "0f7c2b1e-8d0d-4d4d-9e2d-1a2b3c4d5e6f",
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "payload"
+        ],
+        "title": "CreateOrUpdateRequest",
+        "type": "object"
+      },
+      "CreateOrUpdateResponse": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional message providing additional information.",
+            "title": "Message"
+          },
+          "response_id": {
+            "description": "ID of the response. This is populated from `request_id`.",
+            "title": "Response Id",
+            "type": "string"
+          },
+          "status": {
+            "description": "Status of the request.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "response_id",
+          "status"
+        ],
+        "title": "CreateOrUpdateResponse",
+        "type": "object"
+      },
+      "EmbeddingConfig": {
+        "description": "Configuration for embeddings in the store.",
+        "properties": {
+          "data": {
+            "description": "Embedding vector data",
+            "items": {
+              "type": "number"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "name": {
+            "description": "Name of the embedding model (e.g., huggingface model name)",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "EmbeddingConfig",
+        "type": "object"
+      },
+      "ExtractionPayload": {
+        "properties": {
+          "data": {
+            "description": "Extraction payload as a list of JSON objects. The objects are not validated by this service and are processed as-is. Clients must ensure each object matches the format specified by `metadata.format`.",
+            "examples": [
+              {
+                "schema": "openclaw-conversation-v1",
+                "session": {
+                  "agentId": "agent-123",
+                  "channel": "matrix",
+                  "sessionId": "906630a9-bf57-48d8-bbae-9d41e7639d29"
+                },
+                "turns": [
+                  {
+                    "index": 0,
+                    "model": "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                    "response": "Opening request from Engineering.",
+                    "stopReason": "stop",
+                    "timestamp": "2026-02-25T20:32:14.783Z",
+                    "toolCalls": [],
+                    "userMessage": "It's Q2 budget planning."
+                  }
+                ]
+              }
+            ],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ExtractionPayloadMetadata",
+            "description": "Metadata describing the format and interpretation of the payload."
+          }
+        },
+        "required": [
+          "metadata",
+          "data"
+        ],
+        "title": "ExtractionPayload",
+        "type": "object"
+      },
+      "ExtractionPayloadMetadata": {
+        "properties": {
+          "format": {
+            "default": "openclaw",
+            "description": "Payload format. Supported values: 'observe-sdk-otel' and 'openclaw'. Defaults to 'openclaw'.",
+            "title": "Format",
+            "type": "string"
+          }
+        },
+        "title": "ExtractionPayloadMetadata",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Header": {
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional identifier of the agent sending the request.",
+            "example": "agent-123",
+            "title": "Agent Id"
+          }
+        },
+        "title": "Header",
+        "type": "object"
+      },
+      "KnowledgeGraphQueryResponseRecord": {
+        "properties": {
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/Concept"
+            },
+            "title": "Concepts",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/Relation"
+            },
+            "title": "Relationships",
+            "type": "array"
+          }
+        },
+        "title": "KnowledgeGraphQueryResponseRecord",
+        "type": "object"
+      },
+      "QueryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "additional_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional additional context used to influence query processing. May include arbitrary JSON key-value pairs such as filters, user context, or execution hints.",
+            "example": {
+              "filters": {
+                "environment": "prod"
+              },
+              "session_id": "abc-123"
+            },
+            "title": "Additional Context"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Header"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional header of the request."
+          },
+          "intent": {
+            "description": "The user\u2019s query intent. This field is required and describes what the caller wants to search for or retrieve.",
+            "example": "what does the website_selector_agent do?",
+            "title": "Intent",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Client-supplied request identifier for tracing and idempotency. If omitted, the service generates a UUID.",
+            "example": "0f7c2b1e-8d0d-4d4d-9e2d-1a2b3c4d5e6f",
+            "title": "Request Id"
+          },
+          "search_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "semantic_graph_traversal",
+            "description": "Search strategy to use when processing the query. If omitted, defaults to `\"semantic_graph_traversal\"`.",
+            "example": "semantic_graph_traversal",
+            "title": "Search Strategy"
+          }
+        },
+        "required": [
+          "intent"
+        ],
+        "title": "QueryRequest",
+        "type": "object"
+      },
+      "QueryResponse": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional message providing additional information.",
+            "title": "Message"
+          },
+          "records": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/KnowledgeGraphQueryResponseRecord"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "List of records associated with the query.",
+            "title": "Records"
+          },
+          "response_id": {
+            "description": "ID of the response. This is populated from `request_id`.",
+            "title": "Response Id",
+            "type": "string"
+          },
+          "status": {
+            "description": "Status of the request.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "response_id",
+          "status",
+          "records"
+        ],
+        "title": "QueryResponse",
+        "type": "object"
+      },
+      "Relation": {
+        "description": "Represents a relationship between concepts.",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additional attributes for the relation",
+            "title": "Attributes"
+          },
+          "embeddings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmbeddingConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Embedding configuration for the relation"
+          },
+          "id": {
+            "description": "Unique identifier for the relation",
+            "title": "Id",
+            "type": "string"
+          },
+          "node_ids": {
+            "description": "List of node IDs this relation connects (minimum 2)",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "relation": {
+            "description": "Type of relationship between nodes",
+            "title": "Relation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "relation",
+          "node_ids"
+        ],
+        "title": "Relation",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "IoC Cognition Fabrics Node Service API",
+    "title": "ioc-cfn-svc API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/shared-memories": {
+      "post": {
+        "operationId": "create_or_update_shared_memories_api_workspaces__workspace_id__multi_agentic_systems__mas_id__shared_memories_post",
+        "parameters": [
+          {
+            "description": "Workspace ID",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "description": "Workspace ID",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Multi-Agentic System ID",
+            "in": "path",
+            "name": "mas_id",
+            "required": true,
+            "schema": {
+              "description": "Multi-Agentic System ID",
+              "title": "Mas Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrUpdateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Or Update Shared Memories",
+        "tags": [
+          "shared-memories"
+        ]
+      }
+    },
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/shared-memories/query": {
+      "post": {
+        "operationId": "fetch_shared_memories_api_workspaces__workspace_id__multi_agentic_systems__mas_id__shared_memories_query_post",
+        "parameters": [
+          {
+            "description": "Workspace ID",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "description": "Workspace ID",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Multi-Agentic System ID",
+            "in": "path",
+            "name": "mas_id",
+            "required": true,
+            "schema": {
+              "description": "Multi-Agentic System ID",
+              "title": "Mas Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fetch Shared Memories",
+        "tags": [
+          "shared-memories"
+        ]
+      }
+    }
+  }
+}

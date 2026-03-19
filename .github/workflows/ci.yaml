@@ -29,8 +29,8 @@ permissions:
 jobs:
   ################################## Code Checkout ##############################
   ###############################################################################
-  checkout-unit-tests:
-    name: checkout & unit test
+  checkout-unit-tests-build-docs:
+    name: checkout & unit test & build docs
     runs-on:
       group: ${{ vars.DEFAULT_ARC_RUNNERS }}
     container:
@@ -115,11 +115,15 @@ jobs:
         run: |
           make test
 
+      - name: Build docs
+        run: |
+          make docs
+
   #################### Docker build & push ######################
   ###############################################################################
   docker-build-push:
     name: Docker Build & Push
-    needs: [checkout-unit-tests]
+    needs: [checkout-unit-tests-build-docs]
     runs-on:
       group: ${{ vars.DEFAULT_ARC_RUNNERS }}
 
@@ -174,7 +178,7 @@ jobs:
     name: Reusable Workflow CI Status
     # This should be an array of ALL active jobs that are used/run
     needs: [
-        checkout-unit-tests,
+        checkout-unit-tests-build-docs,
         docker-build-push,
       ]
     if: always()

@@ -2,12 +2,13 @@
 # ioc-cognition-fabric-node-svc
 # =========================
 
-.PHONY: help install run run-dev test test-cov lint clean
+.PHONY: help install run run-dev test test-cov lint clean docs
 
 PYTHON := python
 POETRY := poetry
 APP_MODULE := src.app.main:app
 PORT ?= 9002
+OPENAPI_OUT ?= docs/openapi.json
 
 help:
 	@echo "Available commands:"
@@ -16,6 +17,7 @@ help:
 	@echo "  make run-dev     Run the service with auto-reload"
 	@echo "  make test        Run unit tests"
 	@echo "  make test-cov    Run tests with coverage"
+	@echo "  make docs     	  Generate docs/openapi.json"
 	@echo "  make clean       Remove cache and build artifacts"
 
 install:
@@ -31,10 +33,15 @@ run-dev:
 	$(POETRY) run uvicorn $(APP_MODULE) --host 0.0.0.0 --port $(PORT) --reload
 
 test:
-	$(POETRY) run pytest
+	$(POETRY) run pytest --ignore=tests/integration
 
 test-cov:
-	$(POETRY) run pytest --cov=src --cov-report=term-missing
+	$(POETRY) run pytest --ignore=tests/integration --cov=src --cov-report=term-missing
+
+docs:
+	@mkdir -p $(dir $(OPENAPI_OUT))
+	@$(POETRY) run $(PYTHON) -c 'import json; from src.app.main import create_app; print(json.dumps(create_app().openapi(), indent=2, sort_keys=True))' > $(OPENAPI_OUT)
+	@echo "Wrote $(OPENAPI_OUT)"
 
 clean:
 	rm -rf .pytest_cache .coverage __pycache__ .mypy_cache
