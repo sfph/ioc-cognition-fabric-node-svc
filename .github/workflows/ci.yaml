@@ -1,11 +1,9 @@
 name: ioc-CFN CI workflow
 
 on:
-  # Run on any branch push to test changes
   push:
     branches:
-      - "**"
-    # only build when important files change
+      - main
     paths:
       - 'src/**'
       - 'tests/**'
@@ -14,9 +12,16 @@ on:
       - '.github/workflows/ci.yaml'
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
+
   pull_request:
     branches:
-      - "main"
+      - main
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - '.github/workflows/ci.yaml'
 
   workflow_dispatch:
 
