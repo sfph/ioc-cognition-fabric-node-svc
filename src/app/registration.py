@@ -12,6 +12,8 @@ from typing import Any, Dict, Optional
 
 import httpx
 
+from src.app.utils.utils import service_name
+
 logger = logging.getLogger(__name__)
 
 DISABLE_REGISTRATION = os.getenv("DISABLE_REGISTRATION", "").lower() == "true"
@@ -35,7 +37,8 @@ def get_outbound_ip() -> str:
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
     except Exception:
-        return ""
+        logger.warning("Failed to determine outbound IP, using the service name address for it")
+        return os.environ.get("SERVICE_NAME", service_name)
 
 
 async def refresh_config(mgmt_url: str) -> None:
