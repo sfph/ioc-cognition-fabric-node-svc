@@ -5,12 +5,20 @@ import os
 
 from caching.app.agent import CachingLayer
 from evidence.app.agent.evidence import process_evidence
-from evidence.app.api.schemas import (ReasonerCognitionRequest, Header,
-                                      RequestPayload, ReasonerCognitionResponse,
-                                      NeighborsResponse, ConceptsByIdsRequest,
-                                      ConceptsByIdsResponse, Concept,
-                                      GraphPathsResponse, GraphPathsRequest,
-                                      PathEdge, Path)
+from evidence.app.api.schemas import (
+    ReasonerCognitionRequest,
+    Header,
+    RequestPayload,
+    ReasonerCognitionResponse,
+    NeighborsResponse,
+    ConceptsByIdsRequest,
+    ConceptsByIdsResponse,
+    Concept,
+    GraphPathsResponse,
+    GraphPathsRequest,
+    PathEdge,
+    Path,
+)
 from evidence.app.data.http_repo import HttpDataRepository
 from evidence.app.data.mock_repo import MockDataRepository
 from fastapi import APIRouter, Body, HTTPException, status, Depends
@@ -38,10 +46,6 @@ logger = logging.getLogger(__name__)
 
 def get_cache_layer(request: Request):
     return request.app.state.cache_layer
-
-
-def get_settings(request: Request):
-    return request.app.state.settings
 
 
 def json_escape_string(value: str) -> str:
@@ -123,18 +127,6 @@ def transform_extraction_relations(
     return out
 
 
-def transform_extraction_response_to_records(
-    resp: Optional[Dict[str, Any]],
-) -> Optional[Dict[str, Any]]:
-    if resp is None:
-        return None
-
-    return {
-        "concepts": transform_extraction_concepts(resp.get("concepts", [])),
-        "relations": transform_extraction_relations(resp.get("relations", [])),
-    }
-
-
 @router.post(
     "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/shared-memories",
     status_code=status.HTTP_201_CREATED,
@@ -186,7 +178,7 @@ async def create_or_update_shared_memories(
         concepts = transform_extraction_concepts(result.get("concepts", []))
         relations = transform_extraction_relations(result.get("relations", []))
 
-        logger.info(f"Concepts from extraction: {concepts}")
+        logger.debug(f"Concepts from extraction: {concepts}")
         logger.debug(f"Relations from extraction: {relations}")
 
         kg_resp = await upsert_knowledge_graph_async(
@@ -215,67 +207,6 @@ async def create_or_update_shared_memories(
         status=kg_resp.status,
         message=kg_resp.message,
     )
-
-
-def transform_reasoner_response_to_concepts(
-    reasoner_resp: ReasonerCognitionResponse,
-) -> Optional[List[Dict[str, str]]]:
-    """
-    Extract concept IDs and names from a ReasonerCognitionResponse.
-
-    Expected input is a ReasonerCognitionResponse object whose `records` contain
-    `KnowledgeRecord` items. Each record's `content` is a dict, and concepts are
-    expected at:
-
-        record.content["evidence"]["details"]["concepts"]
-
-    Example shape:
-
-        ReasonerCognitionResponse(
-            ...,
-            records=[
-                KnowledgeRecord(
-                    ...,
-                    content={
-                        "evidence": {
-                            "details": {
-                                "concepts": [
-                                    {
-                                        "concept_id": "...",
-                                        "name": "..."
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                )
-            ]
-        )
-
-    Notes:
-    - If `reasoner_resp` is None, returns None.
-    - If no concepts are present, returns an empty list.
-    - Records that do not contain `evidence.details.concepts` are skipped.
-    - Each returned concept is normalized to:
-        {"id": <conceptId>, "name": <name>}
-    """
-    if reasoner_resp is None:
-        return None
-
-    concepts: List[Dict[str, str]] = []
-
-    for rec in reasoner_resp.records:
-        details = rec.content.get("evidence", {}).get("details", {})
-
-        for c in details.get("concepts", []):
-            concepts.append(
-                {
-                    "id": c.get("concept_id"),
-                    "name": c.get("name"),
-                }
-            )
-
-    return concepts
 
 
 @router.post(
@@ -307,22 +238,26 @@ async def fetch_shared_memories(
         request_id=request_id,
         payload=RequestPayload(intent=body.intent),
     )
-    repo = HttpDataRepository(base_url="http://localhost:9002")
+
+    repo = HttpDataRepository(
+        base_url=f"http://localhost:{os.environ.get('PORT', '9002')}",
+        workspace_id=workspace_id,
+        mas_id=mas_id
+    )
+
     eg_response = await process_evidence(
         request, repo_adapter=repo, cache_layer=cache_layer
     )
 
-    logger.info(f"Evidence gathering response:  {eg_response}")
+    logger.debug(f"Evidence gathering response: {eg_response}")
 
     # extract evidence fields
     evidence = {}
-    trace = {}
     if getattr(eg_response, "records", None):
         rec0 = eg_response.records[0]
         content = getattr(rec0, "content", None)
         if isinstance(content, dict):
             evidence = content.get("evidence") or {}
-            trace = content.get("trace") or {}
 
     evidence_status = evidence.get("status")  # e.g. "insufficient"
     final_response = evidence.get("final_response")  # may be missing
@@ -330,7 +265,11 @@ async def fetch_shared_memories(
 
     message = (
         final_response
-        or (f"Insufficient evidence for entity '{entity_name}'" if evidence_status == "insufficient" and entity_name else None)
+        or (
+            f"Insufficient evidence for entity '{entity_name}'"
+            if evidence_status == "insufficient" and entity_name
+            else None
+        )
         or (f"Evidence status: {evidence_status}" if evidence_status else None)
         or "evidence processed"
     )
@@ -343,19 +282,23 @@ async def fetch_shared_memories(
 
 
 @router.get(
-    "/v1/graph/neighbors/{concept_id}",
+    "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/graph/neighbors/{concept_id}",
     response_model=NeighborsResponse,
     status_code=status.HTTP_200_OK,
     response_model_exclude_none=True,
+    include_in_schema=False,
     tags=["shared-memories"],
 )
 async def get_neighbors_by_id(
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     concept_id: str = ApiPath(..., description="Concept ID"),
 ):
     try:
         kg_response = await query_knowledge_graph_async(
-            mas_id="mas_openclaw_test",
-            concepts=[{'id': concept_id}],
+            wksp_id=workspace_id,
+            mas_id=mas_id,
+            concepts=[{"id": concept_id}],
             query_type="neighbour",
         )
     except Exception as exc:
@@ -368,7 +311,9 @@ async def get_neighbors_by_id(
             detail=f"failed to fetch concept: {exc}",
         )
 
-    logger.info(f"Returning {len(kg_response.records)} neighbors: {kg_response.records}")
+    logger.info(
+        f"Returning {len(kg_response.records)} neighbors: {kg_response.records}"
+    )
 
     return NeighborsResponse(
         records=[record.model_dump() for record in (kg_response.records or [])]
@@ -376,20 +321,24 @@ async def get_neighbors_by_id(
 
 
 @router.post(
-    "/v1/graph/concepts/by_ids",
+    "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/graph/concepts/by_ids",
     response_model=ConceptsByIdsResponse,
     status_code=status.HTTP_200_OK,
     response_model_exclude_none=True,
+    include_in_schema=False,
     tags=["shared-memories"],
 )
 async def fetch_concepts_by_ids(
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     request_body: ConceptsByIdsRequest = Body(..., description="Concepts IDs"),
 ):
     # TODO: make knowledge provider support querying multiple concepts at a time
     try:
         tasks = [
             query_knowledge_graph_async(
-                mas_id="mas_openclaw_test",
+                wksp_id=workspace_id,
+                mas_id=mas_id,
                 concepts=[{"id": concept_id}],
                 query_type="concept",
             )
@@ -424,22 +373,25 @@ async def fetch_concepts_by_ids(
         )
 
 
-
 @router.post(
-    "/v1/graph/paths",
+    "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/graph/paths",
     response_model=GraphPathsResponse,
     status_code=status.HTTP_200_OK,
     response_model_exclude_none=True,
+    include_in_schema=False,
     tags=["shared-memories"],
 )
 async def fetch_paths_by_ids(
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     request_body: GraphPathsRequest = Body(...),
 ) -> GraphPathsResponse:
     try:
         # 1) Query KG for paths
         kg_resp = await query_knowledge_graph_async(
+            wksp_id=workspace_id,
+            mas_id=mas_id,
             depth=request_body.max_depth,
-            mas_id="mas_openclaw_test",
             concepts=[{"id": request_body.source_id}, {"id": request_body.target_id}],
             query_type="path",
         )
@@ -450,16 +402,19 @@ async def fetch_paths_by_ids(
         paths: list[Path] = []
 
         # 2) Each record is assumed to represent a path candidate
-        for rec in (kg_resp.records or []):
+        for rec in kg_resp.records or []:
             concepts = rec.concepts or []
             relationships = rec.relationships or []
 
             # Map concept id -> concept name
-            id_to_name: Dict[str, str] = {c.id: (c.name or "") for c in concepts if getattr(c, "id", None)}
+            id_to_name: Dict[str, str] = {
+                c.id: (c.name or "") for c in concepts if getattr(c, "id", None)
+            }
 
             # 3) Optionally filter relationships by allowed relations
             rels = [
-                r for r in relationships
+                r
+                for r in relationships
                 if getattr(r, "node_ids", None)
                 and len(r.node_ids) >= 2
                 and (not allowed_relations or r.relation in allowed_relations)
@@ -469,7 +424,6 @@ async def fetch_paths_by_ids(
                 continue
 
             # 4) Try to chain relationships into an ordered path
-            #    (Neo4j returns ordered relationships; your KG might not.)
             #    Strategy:
             #      - Build adjacency from from_id -> [rel...]
             #      - Start from source_id if possible
@@ -485,7 +439,11 @@ async def fetch_paths_by_ids(
             start_id = request_body.source_id
             if start_id not in from_to_rels:
                 # fallback: pick a node with 0 in-degree if possible
-                zero_in = [nid for nid, deg in in_degree.items() if deg == 0 and nid in from_to_rels]
+                zero_in = [
+                    nid
+                    for nid, deg in in_degree.items()
+                    if deg == 0 and nid in from_to_rels
+                ]
                 if zero_in:
                     start_id = zero_in[0]
                 else:
@@ -501,7 +459,10 @@ async def fetch_paths_by_ids(
             while current in from_to_rels:
                 next_rel = None
                 for cand in from_to_rels[current]:
-                    rid = getattr(cand, "id", None) or f"{cand.node_ids[0]}->{cand.relation}->{cand.node_ids[1]}"
+                    rid = (
+                        getattr(cand, "id", None)
+                        or f"{cand.node_ids[0]}->{cand.relation}->{cand.node_ids[1]}"
+                    )
                     if rid not in visited_rel_ids:
                         next_rel = cand
                         visited_rel_ids.add(rid)
@@ -575,7 +536,7 @@ async def fetch_paths_by_ids(
             )
 
             # 6) Enforce limit across returned paths
-            if limit is not None and limit > 0 and len(paths) >= limit:
+            if limit is not None and 0 < limit <= len(paths):
                 break
 
         logger.info("Returning %d paths", len(paths))

@@ -74,7 +74,7 @@ async def cognition_engine_lifespan(app: FastAPI):
     await register_both_engines(
         mgmt_plane_url=os.environ.get("MGMT_URL", "http://localhost:9000"),
         engine_host=get_outbound_ip(),
-        engine_port=int(os.environ.get("PORT", 9002))
+        engine_port=int(os.environ.get("PORT", 9002)),
     )
 
     embedding_manager = EmbeddingManager()
