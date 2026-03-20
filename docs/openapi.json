@@ -2,75 +2,60 @@
   "components": {
     "schemas": {
       "Concept": {
-        "description": "Represents a concept in the knowledge graph.",
         "properties": {
-          "attributes": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Additional attributes for the concept",
-            "title": "Attributes"
-          },
           "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Detailed description of the concept",
-            "title": "Description"
-          },
-          "embeddings": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EmbeddingConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Embedding configuration for the concept"
+            "default": "",
+            "title": "Description",
+            "type": "string"
           },
           "id": {
-            "description": "Unique identifier for the concept",
             "title": "Id",
             "type": "string"
           },
           "name": {
-            "description": "Name of the concept",
             "title": "Name",
             "type": "string"
           },
-          "tags": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional list of tags for categorization",
-            "title": "Tags"
+          "type": {
+            "title": "Type",
+            "type": "string"
           }
         },
         "required": [
           "id",
-          "name"
+          "name",
+          "type"
         ],
         "title": "Concept",
+        "type": "object"
+      },
+      "ConceptsByIdsRequest": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "ConceptsByIdsRequest",
+        "type": "object"
+      },
+      "ConceptsByIdsResponse": {
+        "properties": {
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/Concept"
+            },
+            "title": "Concepts",
+            "type": "array"
+          }
+        },
+        "title": "ConceptsByIdsResponse",
         "type": "object"
       },
       "CreateOrUpdateRequest": {
@@ -142,29 +127,6 @@
         "title": "CreateOrUpdateResponse",
         "type": "object"
       },
-      "EmbeddingConfig": {
-        "description": "Configuration for embeddings in the store.",
-        "properties": {
-          "data": {
-            "description": "Embedding vector data",
-            "items": {
-              "type": "number"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "name": {
-            "description": "Name of the embedding model (e.g., huggingface model name)",
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "EmbeddingConfig",
-        "type": "object"
-      },
       "ExtractionPayload": {
         "properties": {
           "data": {
@@ -221,6 +183,70 @@
         "title": "ExtractionPayloadMetadata",
         "type": "object"
       },
+      "GraphPathsRequest": {
+        "properties": {
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "max_depth": {
+            "default": 3,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "target_id"
+        ],
+        "title": "GraphPathsRequest",
+        "type": "object"
+      },
+      "GraphPathsResponse": {
+        "properties": {
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/Path"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "status": {
+            "default": "success",
+            "enum": [
+              "success",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "GraphPathsResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -253,24 +279,109 @@
         "title": "Header",
         "type": "object"
       },
-      "KnowledgeGraphQueryResponseRecord": {
+      "NeighborsResponse": {
         "properties": {
-          "concepts": {
+          "records": {
             "items": {
-              "$ref": "#/components/schemas/Concept"
+              "additionalProperties": true,
+              "type": "object"
             },
-            "title": "Concepts",
-            "type": "array"
-          },
-          "relationships": {
-            "items": {
-              "$ref": "#/components/schemas/Relation"
-            },
-            "title": "Relationships",
+            "title": "Records",
             "type": "array"
           }
         },
-        "title": "KnowledgeGraphQueryResponseRecord",
+        "title": "NeighborsResponse",
+        "type": "object"
+      },
+      "Path": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/PathEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "node_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Ids"
+          },
+          "path_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path Length"
+          },
+          "symbolic": {
+            "title": "Symbolic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "edges",
+          "symbolic"
+        ],
+        "title": "Path",
+        "type": "object"
+      },
+      "PathEdge": {
+        "properties": {
+          "from_id": {
+            "title": "From Id",
+            "type": "string"
+          },
+          "from_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Name"
+          },
+          "relation": {
+            "title": "Relation",
+            "type": "string"
+          },
+          "to_id": {
+            "title": "To Id",
+            "type": "string"
+          },
+          "to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Name"
+          }
+        },
+        "required": [
+          "from_id",
+          "relation",
+          "to_id"
+        ],
+        "title": "PathEdge",
         "type": "object"
       },
       "QueryRequest": {
@@ -360,21 +471,6 @@
             "description": "Optional message providing additional information.",
             "title": "Message"
           },
-          "records": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/KnowledgeGraphQueryResponseRecord"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "List of records associated with the query.",
-            "title": "Records"
-          },
           "response_id": {
             "description": "ID of the response. This is populated from `request_id`.",
             "title": "Response Id",
@@ -388,65 +484,9 @@
         },
         "required": [
           "response_id",
-          "status",
-          "records"
+          "status"
         ],
         "title": "QueryResponse",
-        "type": "object"
-      },
-      "Relation": {
-        "description": "Represents a relationship between concepts.",
-        "properties": {
-          "attributes": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Additional attributes for the relation",
-            "title": "Attributes"
-          },
-          "embeddings": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EmbeddingConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Embedding configuration for the relation"
-          },
-          "id": {
-            "description": "Unique identifier for the relation",
-            "title": "Id",
-            "type": "string"
-          },
-          "node_ids": {
-            "description": "List of node IDs this relation connects (minimum 2)",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 2,
-            "title": "Node Ids",
-            "type": "array"
-          },
-          "relation": {
-            "description": "Type of relationship between nodes",
-            "title": "Relation",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "relation",
-          "node_ids"
-        ],
-        "title": "Relation",
         "type": "object"
       },
       "ValidationError": {
@@ -498,6 +538,133 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/graph/concepts/by_ids": {
+      "post": {
+        "operationId": "fetch_concepts_by_ids_api_v1_graph_concepts_by_ids_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConceptsByIdsRequest",
+                "description": "Concepts IDs"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConceptsByIdsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fetch Concepts By Ids",
+        "tags": [
+          "shared-memories"
+        ]
+      }
+    },
+    "/api/v1/graph/neighbors/{concept_id}": {
+      "get": {
+        "operationId": "get_neighbors_by_id_api_v1_graph_neighbors__concept_id__get",
+        "parameters": [
+          {
+            "description": "Concept ID",
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": {
+              "description": "Concept ID",
+              "title": "Concept Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeighborsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Neighbors By Id",
+        "tags": [
+          "shared-memories"
+        ]
+      }
+    },
+    "/api/v1/graph/paths": {
+      "post": {
+        "operationId": "fetch_paths_by_ids_api_v1_graph_paths_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphPathsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphPathsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fetch Paths By Ids",
+        "tags": [
+          "shared-memories"
+        ]
+      }
+    },
     "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/shared-memories": {
       "post": {
         "operationId": "create_or_update_shared_memories_api_workspaces__workspace_id__multi_agentic_systems__mas_id__shared_memories_post",

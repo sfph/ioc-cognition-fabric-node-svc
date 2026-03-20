@@ -1,17 +1,20 @@
+import asyncio
 import logging
 import json
 import os
 
 from caching.app.agent import CachingLayer
 from evidence.app.agent.evidence import process_evidence
-from evidence.app.api.schemas import (
-    ReasonerCognitionRequest,
-    Header,
-    RequestPayload,
-    ReasonerCognitionResponse,
-)
+from evidence.app.api.schemas import (ReasonerCognitionRequest, Header,
+                                      RequestPayload, ReasonerCognitionResponse,
+                                      NeighborsResponse, ConceptsByIdsRequest,
+                                      ConceptsByIdsResponse, Concept,
+                                      GraphPathsResponse, GraphPathsRequest,
+                                      PathEdge, Path)
+from evidence.app.data.http_repo import HttpDataRepository
 from evidence.app.data.mock_repo import MockDataRepository
-from fastapi import APIRouter, Path, Body, HTTPException, status, Depends
+from fastapi import APIRouter, Body, HTTPException, status, Depends
+from fastapi import Path as ApiPath
 from typing import List, Optional, Dict, Any
 
 from ingestion.app.agent import KnowledgeProcessor
@@ -141,8 +144,8 @@ def transform_extraction_response_to_records(
 )
 async def create_or_update_shared_memories(
     body: CreateOrUpdateRequest = Body(...),
-    workspace_id: str = Path(..., description="Workspace ID"),
-    mas_id: str = Path(..., description="Multi-Agentic System ID"),
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     cache_layer: CachingLayer = Depends(get_cache_layer),
 ):
     request_id = body.request_id
@@ -183,7 +186,7 @@ async def create_or_update_shared_memories(
         concepts = transform_extraction_concepts(result.get("concepts", []))
         relations = transform_extraction_relations(result.get("relations", []))
 
-        logger.debug(f"Concepts from extraction: {concepts}")
+        logger.info(f"Concepts from extraction: {concepts}")
         logger.debug(f"Relations from extraction: {relations}")
 
         kg_resp = await upsert_knowledge_graph_async(
@@ -284,8 +287,8 @@ def transform_reasoner_response_to_concepts(
 )
 async def fetch_shared_memories(
     body: QueryRequest = Body(...),
-    workspace_id: str = Path(..., description="Workspace ID"),
-    mas_id: str = Path(..., description="Multi-Agentic System ID"),
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     cache_layer: CachingLayer = Depends(get_cache_layer),
 ):
     request_id = body.request_id
@@ -304,63 +307,217 @@ async def fetch_shared_memories(
         request_id=request_id,
         payload=RequestPayload(intent=body.intent),
     )
-    repo = MockDataRepository()
-    response = await process_evidence(
+    repo = HttpDataRepository(base_url="http://localhost:9002")
+    eg_response = await process_evidence(
         request, repo_adapter=repo, cache_layer=cache_layer
     )
 
-    concepts = transform_reasoner_response_to_concepts(response)
-    if len(concepts) == 0:
-        return QueryResponse(
-            response_id=request_id,
-            status="success",
-            message="no relevant concepts found",
-            records=None,
-        )
+    logger.info(f"Evidence gathering response:  {eg_response}")
 
+    # extract evidence fields
+    evidence = {}
+    trace = {}
+    if getattr(eg_response, "records", None):
+        rec0 = eg_response.records[0]
+        content = getattr(rec0, "content", None)
+        if isinstance(content, dict):
+            evidence = content.get("evidence") or {}
+            trace = content.get("trace") or {}
+
+    evidence_status = evidence.get("status")  # e.g. "insufficient"
+    final_response = evidence.get("final_response")  # may be missing
+    entity_name = (evidence.get("entity") or {}).get("name")
+
+    message = (
+        final_response
+        or (f"Insufficient evidence for entity '{entity_name}'" if evidence_status == "insufficient" and entity_name else None)
+        or (f"Evidence status: {evidence_status}" if evidence_status else None)
+        or "evidence processed"
+    )
+
+    return QueryResponse(
+        response_id=request_id,
+        status="success",
+        message=message,
+    )
+
+
+@router.get(
+    "/v1/graph/neighbors/{concept_id}",
+    response_model=NeighborsResponse,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
+    tags=["shared-memories"],
+)
+async def get_neighbors_by_id(
+    concept_id: str = ApiPath(..., description="Concept ID"),
+):
     try:
         kg_response = await query_knowledge_graph_async(
-            mas_id=mas_id,
-            wksp_id=workspace_id,
-            concepts=concepts,
-            request_id=request_id,
+            mas_id="mas_openclaw_test",
+            concepts=[{'id': concept_id}],
             query_type="neighbour",
         )
     except Exception as exc:
         logger.exception(
-            f"Knowledge graph query failed | workspace={workspace_id} mas={mas_id}: {exc}",
+            f"Knowledge graph query failed | concept ID={concept_id}: {exc}",
         )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"failed to fetch shared memories: {exc}",
+            detail=f"failed to fetch concept: {exc}",
         )
 
-    # -----------------------
-    # Build response
-    # -----------------------
-    response_dict = QueryResponse(
-        response_id=request_id,
-        status=kg_response.status,
-        message=kg_response.message,
-        records=kg_response.records,
-    ).model_dump()
+    logger.info(f"Returning {len(kg_response.records)} neighbors: {kg_response.records}")
 
-    # -----------------------
-    # Remove embeddings
-    # -----------------------
-    for record in response_dict["records"]:
-        for concept in record.get("concepts", []):
-            concept["embeddings"] = None
-        for rel in record.get("relations", []):
-            rel["embeddings"] = None
-
-    response = QueryResponse.model_validate(response_dict)
-
-    logger.info(
-        "Shared memories query succeeded | status=%s records=%d",
-        response.status,
-        len(response.records),
+    return NeighborsResponse(
+        records=[record.model_dump() for record in (kg_response.records or [])]
     )
 
-    return response
+
+@router.post(
+    "/v1/graph/concepts/by_ids",
+    response_model=ConceptsByIdsResponse,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
+    tags=["shared-memories"],
+)
+async def fetch_concepts_by_ids(
+    request_body: ConceptsByIdsRequest = Body(..., description="Concepts IDs"),
+):
+    # TODO: make knowledge provider support querying multiple concepts at a time
+    try:
+        tasks = [
+            query_knowledge_graph_async(
+                mas_id="mas_openclaw_test",
+                concepts=[{"id": concept_id}],
+                query_type="concept",
+            )
+            for concept_id in request_body.ids
+        ]
+
+        responses = await asyncio.gather(*tasks)
+
+        concepts = [
+            Concept(
+                id=concept.id,
+                name=concept.name,
+                type=(concept.attributes or {}).get("concept_type", ""),
+                description=concept.description or "",
+            )
+            for response in responses
+            for record in (response.records or [])
+            for concept in (record.concepts or [])
+        ]
+
+        logger.info(f"Returning {len(responses)} concepts: {concepts}")
+
+        return ConceptsByIdsResponse(concepts=concepts)
+
+    except Exception as exc:
+        logger.exception(
+            f"Knowledge graph query failed | concept IDs={request_body.ids}: {exc}",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"failed to fetch concepts by IDs: {exc}",
+        )
+
+
+
+@router.post(
+    "/v1/graph/paths",
+    response_model=GraphPathsResponse,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
+    tags=["shared-memories"],
+)
+async def fetch_paths_by_ids(
+    request_body: GraphPathsRequest = Body(...),
+):
+    # TODO: use limit and relations in knowledge graph query?
+    try:
+        resp = await query_knowledge_graph_async(
+            depth=request_body.max_depth,
+            mas_id="mas_openclaw_test",
+            concepts=[{"id": request_body.source_id}, {"id": request_body.target_id}],
+            query_type="path",
+        )
+
+        paths: list[Path] = []
+
+        for rec in (resp.records or []):
+            # Map concept id -> name (for from_name/to_name fallback)
+            id_to_name: Dict[str, str] = {
+                c.id: (c.name or "") for c in (rec.concepts or [])
+            }
+
+            edges: list[PathEdge] = []
+            node_ids_in_order: list[str] = []
+
+            for rel in (rec.relationships or []):
+                if not rel.node_ids or len(rel.node_ids) < 2:
+                    continue
+
+                from_id, to_id = rel.node_ids[0], rel.node_ids[1]
+
+                from_name = None
+                to_name = None
+
+                # Prefer relationship attributes if present, otherwise concept names
+                if isinstance(rel.attributes, dict):
+                    from_name = rel.attributes.get("source_name")
+                    to_name = rel.attributes.get("target_name")
+
+                from_name = from_name or id_to_name.get(from_id)
+                to_name = to_name or id_to_name.get(to_id)
+
+                edges.append(
+                    PathEdge(
+                        from_id=from_id,
+                        relation=rel.relation,
+                        to_id=to_id,
+                        from_name=from_name,
+                        to_name=to_name,
+                    )
+                )
+
+                # Build an ordered node_id list from edges
+                if not node_ids_in_order:
+                    node_ids_in_order.extend([from_id, to_id])
+                else:
+                    if node_ids_in_order[-1] == from_id:
+                        node_ids_in_order.append(to_id)
+                    else:
+                        # if edges aren't strictly chained, just ensure uniqueness
+                        if from_id not in node_ids_in_order:
+                            node_ids_in_order.append(from_id)
+                        if to_id not in node_ids_in_order:
+                            node_ids_in_order.append(to_id)
+
+            symbolic = " -> ".join(
+                [
+                    f"{e.from_name or e.from_id}-[{e.relation}]->{e.to_name or e.to_id}"
+                    for e in edges
+                ]
+            )
+
+            paths.append(
+                Path(
+                    node_ids=node_ids_in_order or None,
+                    edges=edges,
+                    path_length=len(edges),
+                    symbolic=symbolic,
+                )
+            )
+
+        logger.info(f"Returning {len(paths)} paths: {paths}")
+
+        return GraphPathsResponse(status="success", paths=paths)
+
+    except Exception as exc:
+        logger.exception(f"Knowledge graph query failed: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"failed to fetch paths: {exc}",
+        )

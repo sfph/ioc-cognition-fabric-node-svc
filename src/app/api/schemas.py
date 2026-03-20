@@ -182,6 +182,3 @@ class QueryResponse(BaseModel):
     message: Optional[str] = Field(
         default=None, description="Optional message providing additional information."
     )
-    records: Optional[List[KnowledgeGraphQueryResponseRecord]] = Field(
-        ..., description="List of records associated with the query."
-    )
