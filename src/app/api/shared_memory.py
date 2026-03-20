@@ -15,7 +15,7 @@ from evidence.app.data.http_repo import HttpDataRepository
 from evidence.app.data.mock_repo import MockDataRepository
 from fastapi import APIRouter, Body, HTTPException, status, Depends
 from fastapi import Path as ApiPath
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 
 from ingestion.app.agent import KnowledgeProcessor
 from ingestion.app.agent.concept_vector_store import ConceptVectorStore
@@ -434,40 +434,103 @@ async def fetch_concepts_by_ids(
 )
 async def fetch_paths_by_ids(
     request_body: GraphPathsRequest = Body(...),
-):
-    # TODO: use limit and relations in knowledge graph query?
+) -> GraphPathsResponse:
     try:
-        resp = await query_knowledge_graph_async(
+        # 1) Query KG for paths
+        kg_resp = await query_knowledge_graph_async(
             depth=request_body.max_depth,
             mas_id="mas_openclaw_test",
             concepts=[{"id": request_body.source_id}, {"id": request_body.target_id}],
             query_type="path",
         )
 
+        allowed_relations: Set[str] = set(request_body.relations or [])
+        limit: Optional[int] = request_body.limit
+
         paths: list[Path] = []
 
-        for rec in (resp.records or []):
-            # Map concept id -> name (for from_name/to_name fallback)
-            id_to_name: Dict[str, str] = {
-                c.id: (c.name or "") for c in (rec.concepts or [])
-            }
+        # 2) Each record is assumed to represent a path candidate
+        for rec in (kg_resp.records or []):
+            concepts = rec.concepts or []
+            relationships = rec.relationships or []
 
+            # Map concept id -> concept name
+            id_to_name: Dict[str, str] = {c.id: (c.name or "") for c in concepts if getattr(c, "id", None)}
+
+            # 3) Optionally filter relationships by allowed relations
+            rels = [
+                r for r in relationships
+                if getattr(r, "node_ids", None)
+                and len(r.node_ids) >= 2
+                and (not allowed_relations or r.relation in allowed_relations)
+            ]
+
+            if not rels:
+                continue
+
+            # 4) Try to chain relationships into an ordered path
+            #    (Neo4j returns ordered relationships; your KG might not.)
+            #    Strategy:
+            #      - Build adjacency from from_id -> [rel...]
+            #      - Start from source_id if possible
+            from_to_rels: Dict[str, list[Any]] = {}
+            in_degree: Dict[str, int] = {}
+
+            for r in rels:
+                from_id, to_id = r.node_ids[0], r.node_ids[1]
+                from_to_rels.setdefault(from_id, []).append(r)
+                in_degree[to_id] = in_degree.get(to_id, 0) + 1
+                in_degree.setdefault(from_id, in_degree.get(from_id, 0))
+
+            start_id = request_body.source_id
+            if start_id not in from_to_rels:
+                # fallback: pick a node with 0 in-degree if possible
+                zero_in = [nid for nid, deg in in_degree.items() if deg == 0 and nid in from_to_rels]
+                if zero_in:
+                    start_id = zero_in[0]
+                else:
+                    # last resort: just use the first relationship's from_id
+                    start_id = rels[0].node_ids[0]
+
+            ordered_rels: list[Any] = []
+            visited_rel_ids: Set[str] = set()
+            current = start_id
+
+            # Greedy walk: pick the first unused outgoing rel each step
+            # Stop on dead-end or when target reached
+            while current in from_to_rels:
+                next_rel = None
+                for cand in from_to_rels[current]:
+                    rid = getattr(cand, "id", None) or f"{cand.node_ids[0]}->{cand.relation}->{cand.node_ids[1]}"
+                    if rid not in visited_rel_ids:
+                        next_rel = cand
+                        visited_rel_ids.add(rid)
+                        break
+
+                if not next_rel:
+                    break
+
+                ordered_rels.append(next_rel)
+                current = next_rel.node_ids[1]
+                if current == request_body.target_id:
+                    break
+
+            # If chaining failed to include everything, fall back to filtered order
+            if not ordered_rels:
+                ordered_rels = rels
+
+            # 5) Build edges and node_ids in order
             edges: list[PathEdge] = []
             node_ids_in_order: list[str] = []
 
-            for rel in (rec.relationships or []):
-                if not rel.node_ids or len(rel.node_ids) < 2:
-                    continue
-
-                from_id, to_id = rel.node_ids[0], rel.node_ids[1]
+            for r in ordered_rels:
+                from_id, to_id = r.node_ids[0], r.node_ids[1]
 
                 from_name = None
                 to_name = None
-
-                # Prefer relationship attributes if present, otherwise concept names
-                if isinstance(rel.attributes, dict):
-                    from_name = rel.attributes.get("source_name")
-                    to_name = rel.attributes.get("target_name")
+                if isinstance(getattr(r, "attributes", None), dict):
+                    from_name = r.attributes.get("source_name")
+                    to_name = r.attributes.get("target_name")
 
                 from_name = from_name or id_to_name.get(from_id)
                 to_name = to_name or id_to_name.get(to_id)
@@ -475,31 +538,31 @@ async def fetch_paths_by_ids(
                 edges.append(
                     PathEdge(
                         from_id=from_id,
-                        relation=rel.relation,
+                        relation=r.relation,
                         to_id=to_id,
                         from_name=from_name,
                         to_name=to_name,
                     )
                 )
 
-                # Build an ordered node_id list from edges
                 if not node_ids_in_order:
                     node_ids_in_order.extend([from_id, to_id])
                 else:
+                    # chain if possible; otherwise just append if new
                     if node_ids_in_order[-1] == from_id:
                         node_ids_in_order.append(to_id)
                     else:
-                        # if edges aren't strictly chained, just ensure uniqueness
                         if from_id not in node_ids_in_order:
                             node_ids_in_order.append(from_id)
                         if to_id not in node_ids_in_order:
                             node_ids_in_order.append(to_id)
 
+            if not edges:
+                continue
+
             symbolic = " -> ".join(
-                [
-                    f"{e.from_name or e.from_id}-[{e.relation}]->{e.to_name or e.to_id}"
-                    for e in edges
-                ]
+                f"{e.from_name or e.from_id}-[{e.relation}]->{e.to_name or e.to_id}"
+                for e in edges
             )
 
             paths.append(
@@ -511,12 +574,15 @@ async def fetch_paths_by_ids(
                 )
             )
 
-        logger.info(f"Returning {len(paths)} paths: {paths}")
+            # 6) Enforce limit across returned paths
+            if limit is not None and limit > 0 and len(paths) >= limit:
+                break
 
+        logger.info("Returning %d paths", len(paths))
         return GraphPathsResponse(status="success", paths=paths)
 
     except Exception as exc:
-        logger.exception(f"Knowledge graph query failed: {exc}")
+        logger.exception("Knowledge graph query failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"failed to fetch paths: {exc}",
