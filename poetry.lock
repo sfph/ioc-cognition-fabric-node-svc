@@ -1758,13 +1758,13 @@ files = [
 
 [[package]]
 name = "knowledge-memory"
-version = "0.1.7.dev20260319145229"
+version = "0.1.9.dev20260323194736"
 description = "ioc-knowledge-memory-svc"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "knowledge_memory-0.1.7.dev20260319145229-py3-none-any.whl", hash = "sha256:881ec8f417bd2d6b5805b660330a73825c22e37b9da18431b5c9c2a2f51d997d"},
+    {file = "knowledge_memory-0.1.9.dev20260323194736-py3-none-any.whl", hash = "sha256:b247eea473a9ed5081196d1a7dafac1e199f9a58d0475695ebca4cc285b544cb"},
 ]
 
 [package.dependencies]
@@ -4229,4 +4229,4 @@ dev = ["black (>=19.3b0) ; python_version >= \"3.6\"", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "ac71ec8bad7c6b679364da9356d8186124cc0f84b5753b6bd6256adeb5098d1d"
+content-hash = "a8a14bbbefd2ef73434d5f030c34ca70b0d2d9444887970b4e64cf2606185f22"
