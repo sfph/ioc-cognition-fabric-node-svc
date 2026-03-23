@@ -9,7 +9,6 @@ from evidence.app.api.schemas import (
     ReasonerCognitionRequest,
     Header,
     RequestPayload,
-    ReasonerCognitionResponse,
     NeighborsResponse,
     ConceptsByIdsRequest,
     ConceptsByIdsResponse,
@@ -20,7 +19,6 @@ from evidence.app.api.schemas import (
     Path,
 )
 from evidence.app.data.http_repo import HttpDataRepository
-from evidence.app.data.mock_repo import MockDataRepository
 from fastapi import APIRouter, Body, HTTPException, status, Depends
 from fastapi import Path as ApiPath
 from typing import List, Optional, Dict, Any, Set
@@ -204,7 +202,6 @@ async def create_or_update_shared_memories(
 
     return CreateOrUpdateResponse(
         response_id=request_id,
-        status=kg_resp.status,
         message=kg_resp.message,
     )
 
@@ -242,7 +239,7 @@ async def fetch_shared_memories(
     repo = HttpDataRepository(
         base_url=f"http://localhost:{os.environ.get('PORT', '9002')}",
         workspace_id=workspace_id,
-        mas_id=mas_id
+        mas_id=mas_id,
     )
 
     eg_response = await process_evidence(
@@ -276,7 +273,6 @@ async def fetch_shared_memories(
 
     return QueryResponse(
         response_id=request_id,
-        status="success",
         message=message,
     )
 
@@ -294,6 +290,13 @@ async def get_neighbors_by_id(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     concept_id: str = ApiPath(..., description="Concept ID"),
 ):
+    logger.info(
+        "Querying neighbors | workspace=%s, mas=%s, concept_id=%s",
+        workspace_id,
+        mas_id,
+        concept_id,
+    )
+
     try:
         kg_response = await query_knowledge_graph_async(
             wksp_id=workspace_id,
@@ -312,8 +315,10 @@ async def get_neighbors_by_id(
         )
 
     logger.info(
-        f"Returning {len(kg_response.records)} neighbors: {kg_response.records}"
+        f"{len(kg_response.records)} neighbor(s) found for concept {concept_id}"
     )
+
+    logger.debug(f"Found neighbors: {kg_response.records}")
 
     return NeighborsResponse(
         records=[record.model_dump() for record in (kg_response.records or [])]
@@ -333,6 +338,13 @@ async def fetch_concepts_by_ids(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     request_body: ConceptsByIdsRequest = Body(..., description="Concepts IDs"),
 ):
+    logger.info(
+        "Querying concepts | workspace=%s, mas=%s, concept_id=%s",
+        workspace_id,
+        mas_id,
+        request_body.ids,
+    )
+
     # TODO: make knowledge provider support querying multiple concepts at a time
     try:
         tasks = [
@@ -359,7 +371,8 @@ async def fetch_concepts_by_ids(
             for concept in (record.concepts or [])
         ]
 
-        logger.info(f"Returning {len(responses)} concepts: {concepts}")
+        logger.info(f"{len(responses)} concept(s) found for {request_body.ids}")
+        logger.debug(f"Returning concepts: {concepts}")
 
         return ConceptsByIdsResponse(concepts=concepts)
 
@@ -386,6 +399,14 @@ async def fetch_paths_by_ids(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     request_body: GraphPathsRequest = Body(...),
 ) -> GraphPathsResponse:
+    logger.info(
+        "Querying path | workspace=%s, mas=%s, source_id=%s, target_id=%s",
+        workspace_id,
+        mas_id,
+        request_body.source_id,
+        request_body.target_id,
+    )
+
     try:
         # 1) Query KG for paths
         kg_resp = await query_knowledge_graph_async(
@@ -539,7 +560,11 @@ async def fetch_paths_by_ids(
             if limit is not None and 0 < limit <= len(paths):
                 break
 
-        logger.info("Returning %d paths", len(paths))
+        logger.info(
+            f"{len(paths)} path(s) found between {request_body.source_id} and {request_body.target_id}"
+        )
+        logger.info(f"Returning paths: {paths}")
+
         return GraphPathsResponse(status="success", paths=paths)
 
     except Exception as exc:

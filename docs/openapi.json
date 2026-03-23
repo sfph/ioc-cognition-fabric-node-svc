@@ -56,16 +56,10 @@
             "description": "ID of the response. This is populated from `request_id`.",
             "title": "Response Id",
             "type": "string"
-          },
-          "status": {
-            "description": "Status of the request.",
-            "title": "Status",
-            "type": "string"
           }
         },
         "required": [
-          "response_id",
-          "status"
+          "response_id"
         ],
         "title": "CreateOrUpdateResponse",
         "type": "object"
@@ -249,16 +243,10 @@
             "description": "ID of the response. This is populated from `request_id`.",
             "title": "Response Id",
             "type": "string"
-          },
-          "status": {
-            "description": "Status of the request.",
-            "title": "Status",
-            "type": "string"
           }
         },
         "required": [
-          "response_id",
-          "status"
+          "response_id"
         ],
         "title": "QueryResponse",
         "type": "object"
