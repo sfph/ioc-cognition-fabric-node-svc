@@ -87,7 +87,6 @@ class CreateOrUpdateResponse(BaseModel):
     response_id: str = Field(
         ..., description="ID of the response. This is populated from `request_id`."
     )
-    status: str = Field(..., description="Status of the request.")
     message: Optional[str] = Field(
         default=None, description="Optional message providing additional information."
     )
@@ -178,10 +177,6 @@ class QueryResponse(BaseModel):
     response_id: str = Field(
         ..., description="ID of the response. This is populated from `request_id`."
     )
-    status: str = Field(..., description="Status of the request.")
     message: Optional[str] = Field(
         default=None, description="Optional message providing additional information."
-    )
-    records: Optional[List[KnowledgeGraphQueryResponseRecord]] = Field(
-        ..., description="List of records associated with the query."
     )

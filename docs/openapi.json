@@ -1,78 +1,6 @@
 {
   "components": {
     "schemas": {
-      "Concept": {
-        "description": "Represents a concept in the knowledge graph.",
-        "properties": {
-          "attributes": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Additional attributes for the concept",
-            "title": "Attributes"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Detailed description of the concept",
-            "title": "Description"
-          },
-          "embeddings": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EmbeddingConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Embedding configuration for the concept"
-          },
-          "id": {
-            "description": "Unique identifier for the concept",
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "description": "Name of the concept",
-            "title": "Name",
-            "type": "string"
-          },
-          "tags": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional list of tags for categorization",
-            "title": "Tags"
-          }
-        },
-        "required": [
-          "id",
-          "name"
-        ],
-        "title": "Concept",
-        "type": "object"
-      },
       "CreateOrUpdateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -128,41 +56,12 @@
             "description": "ID of the response. This is populated from `request_id`.",
             "title": "Response Id",
             "type": "string"
-          },
-          "status": {
-            "description": "Status of the request.",
-            "title": "Status",
-            "type": "string"
           }
         },
         "required": [
-          "response_id",
-          "status"
+          "response_id"
         ],
         "title": "CreateOrUpdateResponse",
-        "type": "object"
-      },
-      "EmbeddingConfig": {
-        "description": "Configuration for embeddings in the store.",
-        "properties": {
-          "data": {
-            "description": "Embedding vector data",
-            "items": {
-              "type": "number"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "name": {
-            "description": "Name of the embedding model (e.g., huggingface model name)",
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "EmbeddingConfig",
         "type": "object"
       },
       "ExtractionPayload": {
@@ -253,26 +152,6 @@
         "title": "Header",
         "type": "object"
       },
-      "KnowledgeGraphQueryResponseRecord": {
-        "properties": {
-          "concepts": {
-            "items": {
-              "$ref": "#/components/schemas/Concept"
-            },
-            "title": "Concepts",
-            "type": "array"
-          },
-          "relationships": {
-            "items": {
-              "$ref": "#/components/schemas/Relation"
-            },
-            "title": "Relationships",
-            "type": "array"
-          }
-        },
-        "title": "KnowledgeGraphQueryResponseRecord",
-        "type": "object"
-      },
       "QueryRequest": {
         "additionalProperties": false,
         "properties": {
@@ -360,93 +239,16 @@
             "description": "Optional message providing additional information.",
             "title": "Message"
           },
-          "records": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/KnowledgeGraphQueryResponseRecord"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "List of records associated with the query.",
-            "title": "Records"
-          },
           "response_id": {
             "description": "ID of the response. This is populated from `request_id`.",
             "title": "Response Id",
             "type": "string"
-          },
-          "status": {
-            "description": "Status of the request.",
-            "title": "Status",
-            "type": "string"
           }
         },
         "required": [
-          "response_id",
-          "status",
-          "records"
+          "response_id"
         ],
         "title": "QueryResponse",
-        "type": "object"
-      },
-      "Relation": {
-        "description": "Represents a relationship between concepts.",
-        "properties": {
-          "attributes": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Additional attributes for the relation",
-            "title": "Attributes"
-          },
-          "embeddings": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EmbeddingConfig"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Embedding configuration for the relation"
-          },
-          "id": {
-            "description": "Unique identifier for the relation",
-            "title": "Id",
-            "type": "string"
-          },
-          "node_ids": {
-            "description": "List of node IDs this relation connects (minimum 2)",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 2,
-            "title": "Node Ids",
-            "type": "array"
-          },
-          "relation": {
-            "description": "Type of relationship between nodes",
-            "title": "Relation",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "relation",
-          "node_ids"
-        ],
-        "title": "Relation",
         "type": "object"
       },
       "ValidationError": {

@@ -37,7 +37,9 @@ def get_outbound_ip() -> str:
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
     except Exception:
-        logger.warning("Failed to determine outbound IP, using the service name address for it")
+        logger.warning(
+            "Failed to determine outbound IP, using the service name address for it"
+        )
         return os.environ.get("SERVICE_NAME", service_name)
 
 

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import json
 import os
@@ -8,11 +9,19 @@ from evidence.app.api.schemas import (
     ReasonerCognitionRequest,
     Header,
     RequestPayload,
-    ReasonerCognitionResponse,
+    NeighborsResponse,
+    ConceptsByIdsRequest,
+    ConceptsByIdsResponse,
+    Concept,
+    GraphPathsResponse,
+    GraphPathsRequest,
+    PathEdge,
+    Path,
 )
-from evidence.app.data.mock_repo import MockDataRepository
-from fastapi import APIRouter, Path, Body, HTTPException, status, Depends
-from typing import List, Optional, Dict, Any
+from evidence.app.data.http_repo import HttpDataRepository
+from fastapi import APIRouter, Body, HTTPException, status, Depends
+from fastapi import Path as ApiPath
+from typing import List, Optional, Dict, Any, Set
 
 from ingestion.app.agent import KnowledgeProcessor
 from ingestion.app.agent.concept_vector_store import ConceptVectorStore
@@ -35,10 +44,6 @@ logger = logging.getLogger(__name__)
 
 def get_cache_layer(request: Request):
     return request.app.state.cache_layer
-
-
-def get_settings(request: Request):
-    return request.app.state.settings
 
 
 def json_escape_string(value: str) -> str:
@@ -120,18 +125,6 @@ def transform_extraction_relations(
     return out
 
 
-def transform_extraction_response_to_records(
-    resp: Optional[Dict[str, Any]],
-) -> Optional[Dict[str, Any]]:
-    if resp is None:
-        return None
-
-    return {
-        "concepts": transform_extraction_concepts(resp.get("concepts", [])),
-        "relations": transform_extraction_relations(resp.get("relations", [])),
-    }
-
-
 @router.post(
     "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/shared-memories",
     status_code=status.HTTP_201_CREATED,
@@ -141,8 +134,8 @@ def transform_extraction_response_to_records(
 )
 async def create_or_update_shared_memories(
     body: CreateOrUpdateRequest = Body(...),
-    workspace_id: str = Path(..., description="Workspace ID"),
-    mas_id: str = Path(..., description="Multi-Agentic System ID"),
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     cache_layer: CachingLayer = Depends(get_cache_layer),
 ):
     request_id = body.request_id
@@ -209,70 +202,8 @@ async def create_or_update_shared_memories(
 
     return CreateOrUpdateResponse(
         response_id=request_id,
-        status=kg_resp.status,
         message=kg_resp.message,
     )
-
-
-def transform_reasoner_response_to_concepts(
-    reasoner_resp: ReasonerCognitionResponse,
-) -> Optional[List[Dict[str, str]]]:
-    """
-    Extract concept IDs and names from a ReasonerCognitionResponse.
-
-    Expected input is a ReasonerCognitionResponse object whose `records` contain
-    `KnowledgeRecord` items. Each record's `content` is a dict, and concepts are
-    expected at:
-
-        record.content["evidence"]["details"]["concepts"]
-
-    Example shape:
-
-        ReasonerCognitionResponse(
-            ...,
-            records=[
-                KnowledgeRecord(
-                    ...,
-                    content={
-                        "evidence": {
-                            "details": {
-                                "concepts": [
-                                    {
-                                        "concept_id": "...",
-                                        "name": "..."
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                )
-            ]
-        )
-
-    Notes:
-    - If `reasoner_resp` is None, returns None.
-    - If no concepts are present, returns an empty list.
-    - Records that do not contain `evidence.details.concepts` are skipped.
-    - Each returned concept is normalized to:
-        {"id": <conceptId>, "name": <name>}
-    """
-    if reasoner_resp is None:
-        return None
-
-    concepts: List[Dict[str, str]] = []
-
-    for rec in reasoner_resp.records:
-        details = rec.content.get("evidence", {}).get("details", {})
-
-        for c in details.get("concepts", []):
-            concepts.append(
-                {
-                    "id": c.get("concept_id"),
-                    "name": c.get("name"),
-                }
-            )
-
-    return concepts
 
 
 @router.post(
@@ -284,8 +215,8 @@ def transform_reasoner_response_to_concepts(
 )
 async def fetch_shared_memories(
     body: QueryRequest = Body(...),
-    workspace_id: str = Path(..., description="Workspace ID"),
-    mas_id: str = Path(..., description="Multi-Agentic System ID"),
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     cache_layer: CachingLayer = Depends(get_cache_layer),
 ):
     request_id = body.request_id
@@ -304,63 +235,341 @@ async def fetch_shared_memories(
         request_id=request_id,
         payload=RequestPayload(intent=body.intent),
     )
-    repo = MockDataRepository()
-    response = await process_evidence(
+
+    repo = HttpDataRepository(
+        base_url=f"http://localhost:{os.environ.get('PORT', '9002')}",
+        workspace_id=workspace_id,
+        mas_id=mas_id,
+    )
+
+    eg_response = await process_evidence(
         request, repo_adapter=repo, cache_layer=cache_layer
     )
 
-    concepts = transform_reasoner_response_to_concepts(response)
-    if len(concepts) == 0:
-        return QueryResponse(
-            response_id=request_id,
-            status="success",
-            message="no relevant concepts found",
-            records=None,
+    logger.debug(f"Evidence gathering response: {eg_response}")
+
+    # extract evidence fields
+    evidence = {}
+    if getattr(eg_response, "records", None):
+        rec0 = eg_response.records[0]
+        content = getattr(rec0, "content", None)
+        if isinstance(content, dict):
+            evidence = content.get("evidence") or {}
+
+    evidence_status = evidence.get("status")  # e.g. "insufficient"
+    final_response = evidence.get("final_response")  # may be missing
+    entity_name = (evidence.get("entity") or {}).get("name")
+
+    message = (
+        final_response
+        or (
+            f"Insufficient evidence for entity '{entity_name}'"
+            if evidence_status == "insufficient" and entity_name
+            else None
         )
+        or (f"Evidence status: {evidence_status}" if evidence_status else None)
+        or "evidence processed"
+    )
+
+    return QueryResponse(
+        response_id=request_id,
+        message=message,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/graph/neighbors/{concept_id}",
+    response_model=NeighborsResponse,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
+    include_in_schema=False,
+    tags=["shared-memories"],
+)
+async def get_neighbors_by_id(
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
+    concept_id: str = ApiPath(..., description="Concept ID"),
+):
+    logger.info(
+        "Querying neighbors | workspace=%s, mas=%s, concept_id=%s",
+        workspace_id,
+        mas_id,
+        concept_id,
+    )
 
     try:
         kg_response = await query_knowledge_graph_async(
-            mas_id=mas_id,
             wksp_id=workspace_id,
-            concepts=concepts,
-            request_id=request_id,
+            mas_id=mas_id,
+            concepts=[{"id": concept_id}],
             query_type="neighbour",
         )
     except Exception as exc:
         logger.exception(
-            f"Knowledge graph query failed | workspace={workspace_id} mas={mas_id}: {exc}",
+            f"Knowledge graph query failed | concept ID={concept_id}: {exc}",
         )
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"failed to fetch shared memories: {exc}",
+            detail=f"failed to fetch concept: {exc}",
         )
 
-    # -----------------------
-    # Build response
-    # -----------------------
-    response_dict = QueryResponse(
-        response_id=request_id,
-        status=kg_response.status,
-        message=kg_response.message,
-        records=kg_response.records,
-    ).model_dump()
-
-    # -----------------------
-    # Remove embeddings
-    # -----------------------
-    for record in response_dict["records"]:
-        for concept in record.get("concepts", []):
-            concept["embeddings"] = None
-        for rel in record.get("relations", []):
-            rel["embeddings"] = None
-
-    response = QueryResponse.model_validate(response_dict)
-
     logger.info(
-        "Shared memories query succeeded | status=%s records=%d",
-        response.status,
-        len(response.records),
+        f"{len(kg_response.records)} neighbor(s) found for concept {concept_id}"
     )
 
-    return response
+    logger.debug(f"Found neighbors: {kg_response.records}")
+
+    return NeighborsResponse(
+        records=[record.model_dump() for record in (kg_response.records or [])]
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/graph/concepts/by_ids",
+    response_model=ConceptsByIdsResponse,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
+    include_in_schema=False,
+    tags=["shared-memories"],
+)
+async def fetch_concepts_by_ids(
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
+    request_body: ConceptsByIdsRequest = Body(..., description="Concepts IDs"),
+):
+    logger.info(
+        "Querying concepts | workspace=%s, mas=%s, concept_id=%s",
+        workspace_id,
+        mas_id,
+        request_body.ids,
+    )
+
+    # TODO: make knowledge provider support querying multiple concepts at a time
+    try:
+        tasks = [
+            query_knowledge_graph_async(
+                wksp_id=workspace_id,
+                mas_id=mas_id,
+                concepts=[{"id": concept_id}],
+                query_type="concept",
+            )
+            for concept_id in request_body.ids
+        ]
+
+        responses = await asyncio.gather(*tasks)
+
+        concepts = [
+            Concept(
+                id=concept.id,
+                name=concept.name,
+                type=(concept.attributes or {}).get("concept_type", ""),
+                description=concept.description or "",
+            )
+            for response in responses
+            for record in (response.records or [])
+            for concept in (record.concepts or [])
+        ]
+
+        logger.info(f"{len(responses)} concept(s) found for {request_body.ids}")
+        logger.debug(f"Returning concepts: {concepts}")
+
+        return ConceptsByIdsResponse(concepts=concepts)
+
+    except Exception as exc:
+        logger.exception(
+            f"Knowledge graph query failed | concept IDs={request_body.ids}: {exc}",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"failed to fetch concepts by IDs: {exc}",
+        )
+
+
+@router.post(
+    "/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/graph/paths",
+    response_model=GraphPathsResponse,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_none=True,
+    include_in_schema=False,
+    tags=["shared-memories"],
+)
+async def fetch_paths_by_ids(
+    workspace_id: str = ApiPath(..., description="Workspace ID"),
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
+    request_body: GraphPathsRequest = Body(...),
+) -> GraphPathsResponse:
+    logger.info(
+        "Querying path | workspace=%s, mas=%s, source_id=%s, target_id=%s",
+        workspace_id,
+        mas_id,
+        request_body.source_id,
+        request_body.target_id,
+    )
+
+    try:
+        # 1) Query KG for paths
+        kg_resp = await query_knowledge_graph_async(
+            wksp_id=workspace_id,
+            mas_id=mas_id,
+            depth=request_body.max_depth,
+            concepts=[{"id": request_body.source_id}, {"id": request_body.target_id}],
+            query_type="path",
+        )
+
+        allowed_relations: Set[str] = set(request_body.relations or [])
+        limit: Optional[int] = request_body.limit
+
+        paths: list[Path] = []
+
+        # 2) Each record is assumed to represent a path candidate
+        for rec in kg_resp.records or []:
+            concepts = rec.concepts or []
+            relationships = rec.relationships or []
+
+            # Map concept id -> concept name
+            id_to_name: Dict[str, str] = {
+                c.id: (c.name or "") for c in concepts if getattr(c, "id", None)
+            }
+
+            # 3) Optionally filter relationships by allowed relations
+            rels = [
+                r
+                for r in relationships
+                if getattr(r, "node_ids", None)
+                and len(r.node_ids) >= 2
+                and (not allowed_relations or r.relation in allowed_relations)
+            ]
+
+            if not rels:
+                continue
+
+            # 4) Try to chain relationships into an ordered path
+            #    Strategy:
+            #      - Build adjacency from from_id -> [rel...]
+            #      - Start from source_id if possible
+            from_to_rels: Dict[str, list[Any]] = {}
+            in_degree: Dict[str, int] = {}
+
+            for r in rels:
+                from_id, to_id = r.node_ids[0], r.node_ids[1]
+                from_to_rels.setdefault(from_id, []).append(r)
+                in_degree[to_id] = in_degree.get(to_id, 0) + 1
+                in_degree.setdefault(from_id, in_degree.get(from_id, 0))
+
+            start_id = request_body.source_id
+            if start_id not in from_to_rels:
+                # fallback: pick a node with 0 in-degree if possible
+                zero_in = [
+                    nid
+                    for nid, deg in in_degree.items()
+                    if deg == 0 and nid in from_to_rels
+                ]
+                if zero_in:
+                    start_id = zero_in[0]
+                else:
+                    # last resort: just use the first relationship's from_id
+                    start_id = rels[0].node_ids[0]
+
+            ordered_rels: list[Any] = []
+            visited_rel_ids: Set[str] = set()
+            current = start_id
+
+            # Greedy walk: pick the first unused outgoing rel each step
+            # Stop on dead-end or when target reached
+            while current in from_to_rels:
+                next_rel = None
+                for cand in from_to_rels[current]:
+                    rid = (
+                        getattr(cand, "id", None)
+                        or f"{cand.node_ids[0]}->{cand.relation}->{cand.node_ids[1]}"
+                    )
+                    if rid not in visited_rel_ids:
+                        next_rel = cand
+                        visited_rel_ids.add(rid)
+                        break
+
+                if not next_rel:
+                    break
+
+                ordered_rels.append(next_rel)
+                current = next_rel.node_ids[1]
+                if current == request_body.target_id:
+                    break
+
+            # If chaining failed to include everything, fall back to filtered order
+            if not ordered_rels:
+                ordered_rels = rels
+
+            # 5) Build edges and node_ids in order
+            edges: list[PathEdge] = []
+            node_ids_in_order: list[str] = []
+
+            for r in ordered_rels:
+                from_id, to_id = r.node_ids[0], r.node_ids[1]
+
+                from_name = None
+                to_name = None
+                if isinstance(getattr(r, "attributes", None), dict):
+                    from_name = r.attributes.get("source_name")
+                    to_name = r.attributes.get("target_name")
+
+                from_name = from_name or id_to_name.get(from_id)
+                to_name = to_name or id_to_name.get(to_id)
+
+                edges.append(
+                    PathEdge(
+                        from_id=from_id,
+                        relation=r.relation,
+                        to_id=to_id,
+                        from_name=from_name,
+                        to_name=to_name,
+                    )
+                )
+
+                if not node_ids_in_order:
+                    node_ids_in_order.extend([from_id, to_id])
+                else:
+                    # chain if possible; otherwise just append if new
+                    if node_ids_in_order[-1] == from_id:
+                        node_ids_in_order.append(to_id)
+                    else:
+                        if from_id not in node_ids_in_order:
+                            node_ids_in_order.append(from_id)
+                        if to_id not in node_ids_in_order:
+                            node_ids_in_order.append(to_id)
+
+            if not edges:
+                continue
+
+            symbolic = " -> ".join(
+                f"{e.from_name or e.from_id}-[{e.relation}]->{e.to_name or e.to_id}"
+                for e in edges
+            )
+
+            paths.append(
+                Path(
+                    node_ids=node_ids_in_order or None,
+                    edges=edges,
+                    path_length=len(edges),
+                    symbolic=symbolic,
+                )
+            )
+
+            # 6) Enforce limit across returned paths
+            if limit is not None and 0 < limit <= len(paths):
+                break
+
+        logger.info(
+            f"{len(paths)} path(s) found between {request_body.source_id} and {request_body.target_id}"
+        )
+        logger.info(f"Returning paths: {paths}")
+
+        return GraphPathsResponse(status="success", paths=paths)
+
+    except Exception as exc:
+        logger.exception("Knowledge graph query failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"failed to fetch paths: {exc}",
+        )
