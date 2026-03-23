@@ -95,6 +95,8 @@ make test
 
 ## Shared Memory APIs
 
+After running the server, API docs may be accessed at http://localhost:9002/docs. Corresponding openapi.json can be found in [docs/openapi.json](./docs/openapi.json).
+
 **Create or Update Shared Memories** - Store or update concepts and relationships for inter-agent communication
 
 This API accepts both Otel Trace and Open Claw output.
