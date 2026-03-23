@@ -33,12 +33,24 @@ The service loads environment variables from an `env.conf` file located at the r
 
 Example `env.conf`:
 
+> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33)
+
 ```bash
 PORT=9002
 LOG_LEVEL=INFO
 MGMT_URL=http://localhost:9000
 CFN_NAME=cfn-local
 HEARTBEAT_INTERVAL_SECONDS=29
+SERVICE_NAME=ioc-cfn-svc
+DB_NAME=ioc-knowledge-db
+DB_USER=postgresUser
+DB_PASSWORD=postgresPW
+DB_HOST=localhost
+DB_PORT=5456
+AZURE_OPENAI_ENDPOINT=<AZURE_OPENAI_ENDPOINT> # replace with your LLM credentials
+AZURE_OPENAI_API_KEY=<AZURE_OPENAI_ENDPOINT> # replace with your LLM credentials
+AZURE_OPENAI_DEPLOYMENT=<AZURE_OPENAI_DEPLOYMENT> # replace with your LLM credentials
+AZURE_OPENAI_API_VERSION=<AZURE_OPENAI_API_VERSION> # replace with your LLM credentials
 ```
 
 ## Running the Server
