@@ -63,7 +63,7 @@ ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA} \
     GIT_BRANCH=${GIT_BRANCH} \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    FASTEMBED_CACHE_PATH=/tmp/fastembed_cache \
+    EMBEDDING_MODEL_PATH=/tmp/fastembed_cache/Qdrant/bge-small-en-v1.5-onnx-Q \
     HF_HUB_DISABLE_SSL_VERIFY=1 \
     CURL_CA_BUNDLE="" \
     PATH="/opt/venv/bin:$PATH"
@@ -85,8 +85,6 @@ COPY --from=builder /opt/venv /opt/venv
 COPY src ./src
 COPY env.conf ./env.conf
 COPY pyproject.toml ./
-
-RUN /opt/venv/bin/python -c "import fastembed, huggingface_hub, httpx, httpcore; print('fastembed', getattr(fastembed, '__version__', 'n/a')); print('huggingface_hub', huggingface_hub.__version__); print('httpx', httpx.__version__); print('httpcore', httpcore.__version__)"
 
 # Pre-download fastembed model files directly from HuggingFace
 # Using curl with --insecure to bypass SSL certificate issues
