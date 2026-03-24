@@ -1,5 +1,37 @@
-1. Start negotiation
-```
+# Semantic Negotiation Flow Example
+
+This example demonstrates a multi-round negotiation between two agents (Alice and Bob) planning a vacation trip.
+
+## Overview
+
+Alice and Bob are negotiating vacation plans with conflicting preferences:
+- **Alice**: Flexible on destination, prefers warm weather, $2000 budget, wants hotel with good reviews
+- **Bob**: Suggests considering different accommodation types, thinks Airbnb offers better value
+
+The negotiation explores 5 issues with multiple options each, going through rounds of proposals, rejections, and counter-offers until agreement.
+
+## How Semantic Negotiation Works
+
+**Available Actions:**
+- **accept**: Agree to the current proposal
+- **reject**: Decline the current proposal
+- **counter_offer**: Propose an alternative solution
+
+**Negotiation Flow:**
+- **Round 1**: The server makes an initial proposal. All participants can only `accept` or `reject`.
+- **Round 2+**: When all participants reject, the system randomly selects one participant to make a `counter_offer`.
+- **After Counter-Offer**: Once a participant submits a counter-offer, the system asks other participants to `accept` or `reject` the new proposal.
+- **Continue**: This cycle repeats until an agreement is reached or the maximum number of rounds is exceeded.
+
+---
+
+## Step 1: Start Negotiation
+
+**What happens**: Initialize the negotiation session by providing the context, agents, and maximum negotiation rounds. The system extracts issues from the text and generates possible options for each issue.
+
+### Request
+
+```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/start \
   -H "Content-Type: application/json" \
   -d '{
@@ -13,11 +45,16 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
   }' | jq
 ```
 
-Example response:
+### Response
+
+**What you get**: The negotiation is initiated with extracted issues, possible options, and initial messages for both agents to respond to the server's initial proposal.
 ```json
 {
   "status": "initiated",
   "session_id": "session-123",
+  "round": 1,
+  "n_steps": 20,
+
   "issues": [
     "destination",
     "somewhere warm",
@@ -25,154 +62,23 @@ Example response:
     "hotel with good reviews",
     "Airbnb"
   ],
+
   "options_per_issue": {
-    "destination": [
-      "Hawaii",
-      "Florida",
-      "Mexico",
-      "Caribbean"
-    ],
-    "somewhere warm": [
-      "tropical climate",
-      "desert climate",
-      "Mediterranean climate",
-      "subtropical climate"
-    ],
-    "$2000 total": [
-      "$1500",
-      "$1800",
-      "$2000",
-      "$2200"
-    ],
-    "hotel with good reviews": [
-      "4-star hotel",
-      "5-star hotel",
-      "hotel with 8+ rating on review sites",
-      "hotel with excellent customer service"
-    ],
-    "Airbnb": [
-      "entire apartment",
-      "private room",
-      "shared space",
-      "luxury Airbnb"
-    ]
+    "destination": ["Hawaii", "Florida", "Mexico", "Caribbean"],
+    "somewhere warm": ["tropical climate", "desert climate", "Mediterranean climate", "subtropical climate"],
+    "$2000 total": ["$1500", "$1800", "$2000", "$2200"],
+    "hotel with good reviews": ["4-star hotel", "5-star hotel", "hotel with 8+ rating on review sites", "hotel with excellent customer service"],
+    "Airbnb": ["entire apartment", "private room", "shared space", "luxury Airbnb"]
   },
-  "n_steps": 20,
-  "round": 1,
+
   "messages": [
     {
-      "version": "0",
-      "message_id": "87def111-a168-58a8-a99f-32c11e7c349c",
-      "dt_created": "2026-03-24T23:00:40.696438+00:00",
-      "origin": {
-        "actor_id": "negotiation-server",
-        "tenant_id": "session-123",
-        "attestation": null
-      },
-      "semantic_context": {
-        "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-        "schema_version": "1.0",
-        "encoding": "json",
-        "session_id": "session-123",
-        "issues": [
-          "destination",
-          "somewhere warm",
-          "$2000 total",
-          "hotel with good reviews",
-          "Airbnb"
-        ],
-        "options_per_issue": {
-          "destination": [
-            "Hawaii",
-            "Florida",
-            "Mexico",
-            "Caribbean"
-          ],
-          "somewhere warm": [
-            "tropical climate",
-            "desert climate",
-            "Mediterranean climate",
-            "subtropical climate"
-          ],
-          "$2000 total": [
-            "$1500",
-            "$1800",
-            "$2000",
-            "$2200"
-          ],
-          "hotel with good reviews": [
-            "4-star hotel",
-            "5-star hotel",
-            "hotel with 8+ rating on review sites",
-            "hotel with excellent customer service"
-          ],
-          "Airbnb": [
-            "entire apartment",
-            "private room",
-            "shared space",
-            "luxury Airbnb"
-          ]
-        },
-        "sao_state": {
-          "running": true,
-          "waiting": false,
-          "started": true,
-          "step": 0,
-          "time": 0.0,
-          "relative_time": 0.0,
-          "broken": false,
-          "timedout": false,
-          "agreement": null,
-          "results": null,
-          "n_negotiators": 2,
-          "has_error": false,
-          "error_details": "",
-          "erred_negotiator": "",
-          "erred_agent": "",
-          "threads": {},
-          "last_thread": "",
-          "left_negotiators": [],
-          "current_offer": {
-            "destination": "Mexico",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "current_proposer": "server",
-          "current_proposer_agent": null,
-          "n_acceptances": 0,
-          "new_offers": [],
-          "new_offerer_agents": [],
-          "last_negotiator": null,
-          "current_data": null,
-          "new_data": [],
-          "n_participating": 2
-        },
-        "sao_response": null,
-        "nmi": null
-      },
-      "payload_hash": "117446c4144cfa15f81f978a717295ac502592298887e02826ba5bf10f96f9f6",
-      "policy_labels": {
-        "sensitivity": "internal",
-        "propagation": "restricted",
-        "retention_policy": "default"
-      },
-      "provenance": {
-        "sources": [],
-        "transforms": []
-      },
       "payload": {
         "action": "respond",
         "participant_id": "alice",
         "round": 1,
-        "n_steps": 20,
         "can_counter_offer": false,
-        "allowed_actions": [
-          "accept",
-          "reject"
-        ],
-        "is_shadow_call": false,
+        "allowed_actions": ["accept", "reject"],
         "current_offer": {
           "destination": "Mexico",
           "somewhere warm": "tropical climate",
@@ -182,129 +88,15 @@ Example response:
         },
         "proposer_id": "server"
       },
-      "state_object_id": null,
-      "parent_ids": [],
-      "logical_clock": null,
-      "payload_refs": [],
-      "confidence_score": null,
-      "ttl_seconds": null,
-      "merge_strategy": null,
-      "risk_score": null,
-      "kind": "negotiate"
+      "...": "other metadata fields omitted"
     },
     {
-      "version": "0",
-      "message_id": "8137d42d-e488-5587-b58f-7218c5aae6ca",
-      "dt_created": "2026-03-24T23:00:40.696497+00:00",
-      "origin": {
-        "actor_id": "negotiation-server",
-        "tenant_id": "session-123",
-        "attestation": null
-      },
-      "semantic_context": {
-        "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-        "schema_version": "1.0",
-        "encoding": "json",
-        "session_id": "session-123",
-        "issues": [
-          "destination",
-          "somewhere warm",
-          "$2000 total",
-          "hotel with good reviews",
-          "Airbnb"
-        ],
-        "options_per_issue": {
-          "destination": [
-            "Hawaii",
-            "Florida",
-            "Mexico",
-            "Caribbean"
-          ],
-          "somewhere warm": [
-            "tropical climate",
-            "desert climate",
-            "Mediterranean climate",
-            "subtropical climate"
-          ],
-          "$2000 total": [
-            "$1500",
-            "$1800",
-            "$2000",
-            "$2200"
-          ],
-          "hotel with good reviews": [
-            "4-star hotel",
-            "5-star hotel",
-            "hotel with 8+ rating on review sites",
-            "hotel with excellent customer service"
-          ],
-          "Airbnb": [
-            "entire apartment",
-            "private room",
-            "shared space",
-            "luxury Airbnb"
-          ]
-        },
-        "sao_state": {
-          "running": true,
-          "waiting": false,
-          "started": true,
-          "step": 0,
-          "time": 0.0,
-          "relative_time": 0.0,
-          "broken": false,
-          "timedout": false,
-          "agreement": null,
-          "results": null,
-          "n_negotiators": 2,
-          "has_error": false,
-          "error_details": "",
-          "erred_negotiator": "",
-          "erred_agent": "",
-          "threads": {},
-          "last_thread": "",
-          "left_negotiators": [],
-          "current_offer": {
-            "destination": "Mexico",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "current_proposer": "server",
-          "current_proposer_agent": null,
-          "n_acceptances": 0,
-          "new_offers": [],
-          "new_offerer_agents": [],
-          "last_negotiator": null,
-          "current_data": null,
-          "new_data": [],
-          "n_participating": 2
-        },
-        "sao_response": null,
-        "nmi": null
-      },
-      "payload_hash": "ec29fdc67a7322ddaf6a03f32f1adb7cdf44be1eb2d91d8435301d44c0e1791b",
-      "policy_labels": {
-        "sensitivity": "internal",
-        "propagation": "restricted",
-        "retention_policy": "default"
-      },
-      "provenance": {
-        "sources": [],
-        "transforms": []
-      },
       "payload": {
         "action": "respond",
         "participant_id": "bob",
         "round": 1,
-        "n_steps": 20,
         "can_counter_offer": false,
-        "allowed_actions": [
-          "accept",
-          "reject"
-        ],
-        "is_shadow_call": false,
+        "allowed_actions": ["accept", "reject"],
         "current_offer": {
           "destination": "Mexico",
           "somewhere warm": "tropical climate",
@@ -314,41 +106,47 @@ Example response:
         },
         "proposer_id": "server"
       },
-      "state_object_id": null,
-      "parent_ids": [],
-      "logical_clock": null,
-      "payload_refs": [],
-      "confidence_score": null,
-      "ttl_seconds": null,
-      "merge_strategy": null,
-      "risk_score": null,
-      "kind": "negotiate"
+      "...": "other metadata fields omitted"
     }
   ]
 }
 ```
 
-2. Both agents considered the initial offer, but they both rejected it:
+**Key fields**:
+- `status`: "initiated" - negotiation has started
+- `issues`: List of topics being negotiated
+- `options_per_issue`: Possible values for each issue
+- `messages`: Each agent receives a request to respond (accept/reject) to the server's initial proposal
 
-```
+---
+
+## Step 2: Both Agents Consider and Reject the Offer
+
+**What happens**: Both Alice and Bob review the initial proposal (Mexico, tropical climate, $1800, etc.), consider it carefully, but ultimately decide to reject it. The system processes their rejections and moves to the next round.
+
+### Request
+
+```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
--H "Content-Type: application/json" \
--d '{
-  "session_id": "session-123",
-  "agent_replies": [
-    {
-      "participant_id": "alice",
-      "action": "reject"
-    },
-    {
-      "participant_id": "bob",
-      "action": "reject"
-    }
-  ]
-}' | jq
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "session-123",
+    "agent_replies": [
+      {
+        "participant_id": "alice",
+        "action": "reject"
+      },
+      {
+        "participant_id": "bob",
+        "action": "reject"
+      }
+    ]
+  }' | jq
 ```
 
-Example response:
+### Response
+
+**What you get**: Since both agents rejected, the negotiation continues to round 2. The system randomly selects Bob to make a counter-offer.
 ```json
 {
   "status": "ongoing",
@@ -356,156 +154,60 @@ Example response:
   "round": 2,
   "messages": [
     {
-      "version": "0",
-      "message_id": "3a4a647b-ec08-5c49-97ce-f0ca17860bc9",
-      "dt_created": "2026-03-24T23:00:55.517068+00:00",
-      "origin": {
-        "actor_id": "negotiation-server",
-        "tenant_id": "session-123",
-        "attestation": null
-      },
-      "semantic_context": {
-        "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-        "schema_version": "1.0",
-        "encoding": "json",
-        "session_id": "session-123",
-        "issues": [
-          "destination",
-          "somewhere warm",
-          "$2000 total",
-          "hotel with good reviews",
-          "Airbnb"
-        ],
-        "options_per_issue": {
-          "destination": [
-            "Hawaii",
-            "Florida",
-            "Mexico",
-            "Caribbean"
-          ],
-          "somewhere warm": [
-            "tropical climate",
-            "desert climate",
-            "Mediterranean climate",
-            "subtropical climate"
-          ],
-          "$2000 total": [
-            "$1500",
-            "$1800",
-            "$2000",
-            "$2200"
-          ],
-          "hotel with good reviews": [
-            "4-star hotel",
-            "5-star hotel",
-            "hotel with 8+ rating on review sites",
-            "hotel with excellent customer service"
-          ],
-          "Airbnb": [
-            "entire apartment",
-            "private room",
-            "shared space",
-            "luxury Airbnb"
-          ]
-        },
-        "sao_state": {
-          "running": true,
-          "waiting": false,
-          "started": true,
-          "step": 1,
-          "time": 0.0,
-          "relative_time": 0.05,
-          "broken": false,
-          "timedout": false,
-          "agreement": null,
-          "results": null,
-          "n_negotiators": 2,
-          "has_error": false,
-          "error_details": "",
-          "erred_negotiator": "",
-          "erred_agent": "",
-          "threads": {},
-          "last_thread": "",
-          "left_negotiators": [],
-          "current_offer": {
-            "destination": "Mexico",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "current_proposer": "server",
-          "current_proposer_agent": null,
-          "n_acceptances": 0,
-          "new_offers": [],
-          "new_offerer_agents": [],
-          "last_negotiator": null,
-          "current_data": null,
-          "new_data": [],
-          "n_participating": 2
-        },
-        "sao_response": null,
-        "nmi": null
-      },
-      "payload_hash": "972bbfff66f75a0e1f5d5a497bec2c4df72413556995349bea6df23a23a4de9e",
-      "policy_labels": {
-        "sensitivity": "internal",
-        "propagation": "restricted",
-        "retention_policy": "default"
-      },
-      "provenance": {
-        "sources": [],
-        "transforms": []
-      },
       "payload": {
         "action": "propose",
         "participant_id": "bob",
         "round": 2,
-        "n_steps": 20,
         "can_counter_offer": true,
-        "allowed_actions": [
-          "counter_offer"
-        ],
-        "is_shadow_call": false
+        "allowed_actions": ["counter_offer"]
       },
-      "state_object_id": null,
-      "parent_ids": [],
-      "logical_clock": null,
-      "payload_refs": [],
-      "confidence_score": null,
-      "ttl_seconds": null,
-      "merge_strategy": null,
-      "risk_score": null,
-      "kind": "negotiate"
+      "...": "other metadata fields omitted"
     }
   ]
 }
 ```
-> Note: only "bob" is allowed to "counter_offer"
 
-3. Bob's counteroffer:
+**Key fields**:
+- `status`: "ongoing" - negotiation continues
+- `round`: 2 - moved to next round after rejections
+- `action`: "propose" - Bob is randomly selected to make a counter-offer
+- `can_counter_offer`: true - Bob can propose a new offer
+- `allowed_actions`: ["counter_offer"] - Only counter-offer is allowed for the selected participant
+
+> **Note:** Only "bob" is allowed to "counter_offer" at this point.
+
+---
+
+## Step 3: Bob Makes a Counter-Offer
+
+**What happens**: Bob (the randomly selected participant) submits a counter-offer, proposing an alternative - changing the destination from Mexico to Florida while keeping other terms similar. After receiving Bob's counter-offer, the system will then ask Alice to respond.
+
+### Request
+
 ```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
--H "Content-Type: application/json" \
--d '{
-  "session_id": "session-123",
-  "agent_replies": [
-    {
-      "participant_id": "bob",
-      "action": "counter_offer",
-      "offer":{
-        "destination": "Florida",
-        "somewhere warm": "tropical climate",
-        "$2000 total": "$1800",
-        "hotel with good reviews": "hotel with 8+ rating on review sites",
-        "Airbnb": "entire apartment"
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "session-123",
+    "agent_replies": [
+      {
+        "participant_id": "bob",
+        "action": "counter_offer",
+        "offer": {
+          "destination": "Florida",
+          "somewhere warm": "tropical climate",
+          "$2000 total": "$1800",
+          "hotel with good reviews": "hotel with 8+ rating on review sites",
+          "Airbnb": "entire apartment"
+        }
       }
-    }
-  ]
-}' | jq
+    ]
+  }' | jq
 ```
 
-Example response:
+### Response
+
+**What you get**: Bob's counter-offer is recorded, and Alice is now asked to respond (accept or reject) to Bob's new proposal.
 ```json
 {
   "status": "ongoing",
@@ -513,118 +215,12 @@ Example response:
   "round": 2,
   "messages": [
     {
-      "version": "0",
-      "message_id": "b13b2f30-f3d1-5ca0-b4b7-6d3f6fca3e7b",
-      "dt_created": "2026-03-24T23:02:08.061525+00:00",
-      "origin": {
-        "actor_id": "negotiation-server",
-        "tenant_id": "session-123",
-        "attestation": null
-      },
-      "semantic_context": {
-        "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-        "schema_version": "1.0",
-        "encoding": "json",
-        "session_id": "session-123",
-        "issues": [
-          "destination",
-          "somewhere warm",
-          "$2000 total",
-          "hotel with good reviews",
-          "Airbnb"
-        ],
-        "options_per_issue": {
-          "destination": [
-            "Hawaii",
-            "Florida",
-            "Mexico",
-            "Caribbean"
-          ],
-          "somewhere warm": [
-            "tropical climate",
-            "desert climate",
-            "Mediterranean climate",
-            "subtropical climate"
-          ],
-          "$2000 total": [
-            "$1500",
-            "$1800",
-            "$2000",
-            "$2200"
-          ],
-          "hotel with good reviews": [
-            "4-star hotel",
-            "5-star hotel",
-            "hotel with 8+ rating on review sites",
-            "hotel with excellent customer service"
-          ],
-          "Airbnb": [
-            "entire apartment",
-            "private room",
-            "shared space",
-            "luxury Airbnb"
-          ]
-        },
-        "sao_state": {
-          "running": true,
-          "waiting": false,
-          "started": true,
-          "step": 1,
-          "time": 0.0,
-          "relative_time": 0.05,
-          "broken": false,
-          "timedout": false,
-          "agreement": null,
-          "results": null,
-          "n_negotiators": 2,
-          "has_error": false,
-          "error_details": "",
-          "erred_negotiator": "",
-          "erred_agent": "",
-          "threads": {},
-          "last_thread": "",
-          "left_negotiators": [],
-          "current_offer": {
-            "destination": "Florida",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "current_proposer": "bob",
-          "current_proposer_agent": null,
-          "n_acceptances": 0,
-          "new_offers": [],
-          "new_offerer_agents": [],
-          "last_negotiator": null,
-          "current_data": null,
-          "new_data": [],
-          "n_participating": 2
-        },
-        "sao_response": null,
-        "nmi": null
-      },
-      "payload_hash": "80ea7835c20b9adc7c1778645a50171b4a758ccd29551bff4a3b8ec5cf1b429e",
-      "policy_labels": {
-        "sensitivity": "internal",
-        "propagation": "restricted",
-        "retention_policy": "default"
-      },
-      "provenance": {
-        "sources": [],
-        "transforms": []
-      },
       "payload": {
         "action": "respond",
         "participant_id": "alice",
         "round": 2,
-        "n_steps": 20,
         "can_counter_offer": false,
-        "allowed_actions": [
-          "accept",
-          "reject"
-        ],
-        "is_shadow_call": false,
+        "allowed_actions": ["accept", "reject"],
         "current_offer": {
           "destination": "Florida",
           "somewhere warm": "tropical climate",
@@ -634,39 +230,46 @@ Example response:
         },
         "proposer_id": "bob"
       },
-      "state_object_id": null,
-      "parent_ids": [],
-      "logical_clock": null,
-      "payload_refs": [],
-      "confidence_score": null,
-      "ttl_seconds": null,
-      "merge_strategy": null,
-      "risk_score": null,
-      "kind": "negotiate"
+      "...": "other metadata fields omitted"
     }
   ]
 }
 ```
 
-> Note: only "alice" is allowed to "accept" or "reject"
+**Key fields**:
+- `status`: "ongoing" - still negotiating
+- `round`: 2 - same round
+- `action`: "respond" - Alice must respond to Bob's proposal
+- `current_offer`: Bob's counter-offer (Florida instead of Mexico)
+- `allowed_actions`: ["accept", "reject"] - Alice can accept or reject
 
-4. Alice accepts the offer:
+> **Note:** Only "alice" is allowed to "accept" or "reject" at this point.
+
+---
+
+## Step 4: Alice Accepts the Offer
+
+**What happens**: Alice reviews Bob's counter-offer and decides to accept it, completing the negotiation successfully.
+
+### Request
 
 ```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
--H "Content-Type: application/json" \
--d '{
-  "session_id": "session-123",
-  "agent_replies": [
-    {
-      "participant_id": "alice",
-      "action": "accept"
-    }
-  ]
-}' | jq
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "session-123",
+    "agent_replies": [
+      {
+        "participant_id": "alice",
+        "action": "accept"
+      }
+    ]
+  }' | jq
 ```
 
-Example final response:
+### Response
+
+**What you get**: The negotiation concludes with an agreement. The response includes the final agreement, the complete negotiation trace with all rounds, and participant decisions.
 
 ```json
 {
@@ -752,1249 +355,11 @@ Example final response:
         }
       ]
     },
-    "raw_state": null,
     "sstp_message_trace": [
-      {
-        "version": "0",
-        "message_id": "87def111-a168-58a8-a99f-32c11e7c349c",
-        "dt_created": "2026-03-24T23:00:40.696438+00:00",
-        "origin": {
-          "actor_id": "negotiation-server",
-          "tenant_id": "session-123",
-          "attestation": null
-        },
-        "semantic_context": {
-          "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-          "schema_version": "1.0",
-          "encoding": "json",
-          "session_id": "session-123",
-          "issues": [
-            "destination",
-            "somewhere warm",
-            "$2000 total",
-            "hotel with good reviews",
-            "Airbnb"
-          ],
-          "options_per_issue": {
-            "destination": [
-              "Hawaii",
-              "Florida",
-              "Mexico",
-              "Caribbean"
-            ],
-            "somewhere warm": [
-              "tropical climate",
-              "desert climate",
-              "Mediterranean climate",
-              "subtropical climate"
-            ],
-            "$2000 total": [
-              "$1500",
-              "$1800",
-              "$2000",
-              "$2200"
-            ],
-            "hotel with good reviews": [
-              "4-star hotel",
-              "5-star hotel",
-              "hotel with 8+ rating on review sites",
-              "hotel with excellent customer service"
-            ],
-            "Airbnb": [
-              "entire apartment",
-              "private room",
-              "shared space",
-              "luxury Airbnb"
-            ]
-          },
-          "sao_state": {
-            "running": true,
-            "waiting": false,
-            "started": true,
-            "step": 0,
-            "time": 0.0,
-            "relative_time": 0.0,
-            "broken": false,
-            "timedout": false,
-            "agreement": null,
-            "results": null,
-            "n_negotiators": 2,
-            "has_error": false,
-            "error_details": "",
-            "erred_negotiator": "",
-            "erred_agent": "",
-            "threads": {},
-            "last_thread": "",
-            "left_negotiators": [],
-            "current_offer": {
-              "destination": "Mexico",
-              "somewhere warm": "tropical climate",
-              "$2000 total": "$1800",
-              "hotel with good reviews": "hotel with 8+ rating on review sites",
-              "Airbnb": "entire apartment"
-            },
-            "current_proposer": "server",
-            "current_proposer_agent": null,
-            "n_acceptances": 0,
-            "new_offers": [],
-            "new_offerer_agents": [],
-            "last_negotiator": null,
-            "current_data": null,
-            "new_data": [],
-            "n_participating": 2
-          },
-          "sao_response": null,
-          "nmi": null
-        },
-        "payload_hash": "117446c4144cfa15f81f978a717295ac502592298887e02826ba5bf10f96f9f6",
-        "policy_labels": {
-          "sensitivity": "internal",
-          "propagation": "restricted",
-          "retention_policy": "default"
-        },
-        "provenance": {
-          "sources": [],
-          "transforms": []
-        },
-        "payload": {
-          "action": "respond",
-          "participant_id": "alice",
-          "round": 1,
-          "n_steps": 20,
-          "can_counter_offer": false,
-          "allowed_actions": [
-            "accept",
-            "reject"
-          ],
-          "is_shadow_call": false,
-          "current_offer": {
-            "destination": "Mexico",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "proposer_id": "server"
-        },
-        "state_object_id": null,
-        "parent_ids": [],
-        "logical_clock": null,
-        "payload_refs": [],
-        "confidence_score": null,
-        "ttl_seconds": null,
-        "merge_strategy": null,
-        "risk_score": null,
-        "kind": "negotiate"
-      },
-      {
-        "version": "0",
-        "message_id": "8137d42d-e488-5587-b58f-7218c5aae6ca",
-        "dt_created": "2026-03-24T23:00:40.696497+00:00",
-        "origin": {
-          "actor_id": "negotiation-server",
-          "tenant_id": "session-123",
-          "attestation": null
-        },
-        "semantic_context": {
-          "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-          "schema_version": "1.0",
-          "encoding": "json",
-          "session_id": "session-123",
-          "issues": [
-            "destination",
-            "somewhere warm",
-            "$2000 total",
-            "hotel with good reviews",
-            "Airbnb"
-          ],
-          "options_per_issue": {
-            "destination": [
-              "Hawaii",
-              "Florida",
-              "Mexico",
-              "Caribbean"
-            ],
-            "somewhere warm": [
-              "tropical climate",
-              "desert climate",
-              "Mediterranean climate",
-              "subtropical climate"
-            ],
-            "$2000 total": [
-              "$1500",
-              "$1800",
-              "$2000",
-              "$2200"
-            ],
-            "hotel with good reviews": [
-              "4-star hotel",
-              "5-star hotel",
-              "hotel with 8+ rating on review sites",
-              "hotel with excellent customer service"
-            ],
-            "Airbnb": [
-              "entire apartment",
-              "private room",
-              "shared space",
-              "luxury Airbnb"
-            ]
-          },
-          "sao_state": {
-            "running": true,
-            "waiting": false,
-            "started": true,
-            "step": 0,
-            "time": 0.0,
-            "relative_time": 0.0,
-            "broken": false,
-            "timedout": false,
-            "agreement": null,
-            "results": null,
-            "n_negotiators": 2,
-            "has_error": false,
-            "error_details": "",
-            "erred_negotiator": "",
-            "erred_agent": "",
-            "threads": {},
-            "last_thread": "",
-            "left_negotiators": [],
-            "current_offer": {
-              "destination": "Mexico",
-              "somewhere warm": "tropical climate",
-              "$2000 total": "$1800",
-              "hotel with good reviews": "hotel with 8+ rating on review sites",
-              "Airbnb": "entire apartment"
-            },
-            "current_proposer": "server",
-            "current_proposer_agent": null,
-            "n_acceptances": 0,
-            "new_offers": [],
-            "new_offerer_agents": [],
-            "last_negotiator": null,
-            "current_data": null,
-            "new_data": [],
-            "n_participating": 2
-          },
-          "sao_response": null,
-          "nmi": null
-        },
-        "payload_hash": "ec29fdc67a7322ddaf6a03f32f1adb7cdf44be1eb2d91d8435301d44c0e1791b",
-        "policy_labels": {
-          "sensitivity": "internal",
-          "propagation": "restricted",
-          "retention_policy": "default"
-        },
-        "provenance": {
-          "sources": [],
-          "transforms": []
-        },
-        "payload": {
-          "action": "respond",
-          "participant_id": "bob",
-          "round": 1,
-          "n_steps": 20,
-          "can_counter_offer": false,
-          "allowed_actions": [
-            "accept",
-            "reject"
-          ],
-          "is_shadow_call": false,
-          "current_offer": {
-            "destination": "Mexico",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "proposer_id": "server"
-        },
-        "state_object_id": null,
-        "parent_ids": [],
-        "logical_clock": null,
-        "payload_refs": [],
-        "confidence_score": null,
-        "ttl_seconds": null,
-        "merge_strategy": null,
-        "risk_score": null,
-        "kind": "negotiate"
-      },
-      {
-        "participant_id": "alice",
-        "action": "reject",
-        "offer": null
-      },
-      {
-        "participant_id": "bob",
-        "action": "reject",
-        "offer": null
-      },
-      {
-        "version": "0",
-        "message_id": "3a4a647b-ec08-5c49-97ce-f0ca17860bc9",
-        "dt_created": "2026-03-24T23:00:55.517068+00:00",
-        "origin": {
-          "actor_id": "negotiation-server",
-          "tenant_id": "session-123",
-          "attestation": null
-        },
-        "semantic_context": {
-          "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-          "schema_version": "1.0",
-          "encoding": "json",
-          "session_id": "session-123",
-          "issues": [
-            "destination",
-            "somewhere warm",
-            "$2000 total",
-            "hotel with good reviews",
-            "Airbnb"
-          ],
-          "options_per_issue": {
-            "destination": [
-              "Hawaii",
-              "Florida",
-              "Mexico",
-              "Caribbean"
-            ],
-            "somewhere warm": [
-              "tropical climate",
-              "desert climate",
-              "Mediterranean climate",
-              "subtropical climate"
-            ],
-            "$2000 total": [
-              "$1500",
-              "$1800",
-              "$2000",
-              "$2200"
-            ],
-            "hotel with good reviews": [
-              "4-star hotel",
-              "5-star hotel",
-              "hotel with 8+ rating on review sites",
-              "hotel with excellent customer service"
-            ],
-            "Airbnb": [
-              "entire apartment",
-              "private room",
-              "shared space",
-              "luxury Airbnb"
-            ]
-          },
-          "sao_state": {
-            "running": true,
-            "waiting": false,
-            "started": true,
-            "step": 1,
-            "time": 0.0,
-            "relative_time": 0.05,
-            "broken": false,
-            "timedout": false,
-            "agreement": null,
-            "results": null,
-            "n_negotiators": 2,
-            "has_error": false,
-            "error_details": "",
-            "erred_negotiator": "",
-            "erred_agent": "",
-            "threads": {},
-            "last_thread": "",
-            "left_negotiators": [],
-            "current_offer": {
-              "destination": "Mexico",
-              "somewhere warm": "tropical climate",
-              "$2000 total": "$1800",
-              "hotel with good reviews": "hotel with 8+ rating on review sites",
-              "Airbnb": "entire apartment"
-            },
-            "current_proposer": "server",
-            "current_proposer_agent": null,
-            "n_acceptances": 0,
-            "new_offers": [],
-            "new_offerer_agents": [],
-            "last_negotiator": null,
-            "current_data": null,
-            "new_data": [],
-            "n_participating": 2
-          },
-          "sao_response": null,
-          "nmi": null
-        },
-        "payload_hash": "972bbfff66f75a0e1f5d5a497bec2c4df72413556995349bea6df23a23a4de9e",
-        "policy_labels": {
-          "sensitivity": "internal",
-          "propagation": "restricted",
-          "retention_policy": "default"
-        },
-        "provenance": {
-          "sources": [],
-          "transforms": []
-        },
-        "payload": {
-          "action": "propose",
-          "participant_id": "bob",
-          "round": 2,
-          "n_steps": 20,
-          "can_counter_offer": true,
-          "allowed_actions": [
-            "counter_offer"
-          ],
-          "is_shadow_call": false
-        },
-        "state_object_id": null,
-        "parent_ids": [],
-        "logical_clock": null,
-        "payload_refs": [],
-        "confidence_score": null,
-        "ttl_seconds": null,
-        "merge_strategy": null,
-        "risk_score": null,
-        "kind": "negotiate"
-      },
-      {
-        "participant_id": "bob",
-        "action": "counter_offer",
-        "offer": {
-          "destination": "Florida",
-          "somewhere warm": "tropical climate",
-          "$2000 total": "$1800",
-          "hotel with good reviews": "hotel with 8+ rating on review sites",
-          "Airbnb": "entire apartment"
-        }
-      },
-      {
-        "version": "0",
-        "message_id": "b13b2f30-f3d1-5ca0-b4b7-6d3f6fca3e7b",
-        "dt_created": "2026-03-24T23:02:08.061525+00:00",
-        "origin": {
-          "actor_id": "negotiation-server",
-          "tenant_id": "session-123",
-          "attestation": null
-        },
-        "semantic_context": {
-          "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-          "schema_version": "1.0",
-          "encoding": "json",
-          "session_id": "session-123",
-          "issues": [
-            "destination",
-            "somewhere warm",
-            "$2000 total",
-            "hotel with good reviews",
-            "Airbnb"
-          ],
-          "options_per_issue": {
-            "destination": [
-              "Hawaii",
-              "Florida",
-              "Mexico",
-              "Caribbean"
-            ],
-            "somewhere warm": [
-              "tropical climate",
-              "desert climate",
-              "Mediterranean climate",
-              "subtropical climate"
-            ],
-            "$2000 total": [
-              "$1500",
-              "$1800",
-              "$2000",
-              "$2200"
-            ],
-            "hotel with good reviews": [
-              "4-star hotel",
-              "5-star hotel",
-              "hotel with 8+ rating on review sites",
-              "hotel with excellent customer service"
-            ],
-            "Airbnb": [
-              "entire apartment",
-              "private room",
-              "shared space",
-              "luxury Airbnb"
-            ]
-          },
-          "sao_state": {
-            "running": true,
-            "waiting": false,
-            "started": true,
-            "step": 1,
-            "time": 0.0,
-            "relative_time": 0.05,
-            "broken": false,
-            "timedout": false,
-            "agreement": null,
-            "results": null,
-            "n_negotiators": 2,
-            "has_error": false,
-            "error_details": "",
-            "erred_negotiator": "",
-            "erred_agent": "",
-            "threads": {},
-            "last_thread": "",
-            "left_negotiators": [],
-            "current_offer": {
-              "destination": "Florida",
-              "somewhere warm": "tropical climate",
-              "$2000 total": "$1800",
-              "hotel with good reviews": "hotel with 8+ rating on review sites",
-              "Airbnb": "entire apartment"
-            },
-            "current_proposer": "bob",
-            "current_proposer_agent": null,
-            "n_acceptances": 0,
-            "new_offers": [],
-            "new_offerer_agents": [],
-            "last_negotiator": null,
-            "current_data": null,
-            "new_data": [],
-            "n_participating": 2
-          },
-          "sao_response": null,
-          "nmi": null
-        },
-        "payload_hash": "80ea7835c20b9adc7c1778645a50171b4a758ccd29551bff4a3b8ec5cf1b429e",
-        "policy_labels": {
-          "sensitivity": "internal",
-          "propagation": "restricted",
-          "retention_policy": "default"
-        },
-        "provenance": {
-          "sources": [],
-          "transforms": []
-        },
-        "payload": {
-          "action": "respond",
-          "participant_id": "alice",
-          "round": 2,
-          "n_steps": 20,
-          "can_counter_offer": false,
-          "allowed_actions": [
-            "accept",
-            "reject"
-          ],
-          "is_shadow_call": false,
-          "current_offer": {
-            "destination": "Florida",
-            "somewhere warm": "tropical climate",
-            "$2000 total": "$1800",
-            "hotel with good reviews": "hotel with 8+ rating on review sites",
-            "Airbnb": "entire apartment"
-          },
-          "proposer_id": "bob"
-        },
-        "state_object_id": null,
-        "parent_ids": [],
-        "logical_clock": null,
-        "payload_refs": [],
-        "confidence_score": null,
-        "ttl_seconds": null,
-        "merge_strategy": null,
-        "risk_score": null,
-        "kind": "negotiate"
-      },
-      {
-        "participant_id": "alice",
-        "action": "accept",
-        "offer": null
-      },
-      {
-        "version": "0",
-        "message_id": "",
-        "dt_created": "2026-03-24T23:03:29.902839+00:00",
-        "origin": {
-          "actor_id": "negotiation-server",
-          "tenant_id": "session-123",
-          "attestation": null
-        },
-        "semantic_context": {
-          "schema_id": "urn:ioc:schema:negotiate:commit:v1",
-          "schema_version": "1.0",
-          "encoding": "json",
-          "session_id": "session-123",
-          "final_agreement": [
-            {
-              "issue_id": "destination",
-              "chosen_option": "Florida"
-            },
-            {
-              "issue_id": "somewhere warm",
-              "chosen_option": "tropical climate"
-            },
-            {
-              "issue_id": "$2000 total",
-              "chosen_option": "$1800"
-            },
-            {
-              "issue_id": "hotel with good reviews",
-              "chosen_option": "hotel with 8+ rating on review sites"
-            },
-            {
-              "issue_id": "Airbnb",
-              "chosen_option": "entire apartment"
-            }
-          ]
-        },
-        "payload_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-        "policy_labels": {
-          "sensitivity": "internal",
-          "propagation": "restricted",
-          "retention_policy": "default"
-        },
-        "provenance": {
-          "sources": [],
-          "transforms": []
-        },
-        "payload": {
-          "status": "agreed",
-          "session_id": "session-123",
-          "total_rounds": 2,
-          "trace": {
-            "rounds": [
-              {
-                "round": 1,
-                "proposer_id": "server",
-                "offer": {
-                  "destination": "Mexico",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                },
-                "decisions": [
-                  {
-                    "participant_id": "alice",
-                    "action": "reject",
-                    "offer": null
-                  },
-                  {
-                    "participant_id": "bob",
-                    "action": "reject",
-                    "offer": null
-                  }
-                ]
-              },
-              {
-                "round": 2,
-                "proposer_id": "bob",
-                "offer": {
-                  "destination": "Florida",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                },
-                "decisions": [
-                  {
-                    "participant_id": "bob",
-                    "action": "counter_offer",
-                    "offer": {
-                      "destination": "Florida",
-                      "somewhere warm": "tropical climate",
-                      "$2000 total": "$1800",
-                      "hotel with good reviews": "hotel with 8+ rating on review sites",
-                      "Airbnb": "entire apartment"
-                    }
-                  },
-                  {
-                    "participant_id": "alice",
-                    "action": "accept",
-                    "offer": null
-                  }
-                ]
-              }
-            ],
-            "final_agreement": [
-              {
-                "issue_id": "destination",
-                "chosen_option": "Florida"
-              },
-              {
-                "issue_id": "somewhere warm",
-                "chosen_option": "tropical climate"
-              },
-              {
-                "issue_id": "$2000 total",
-                "chosen_option": "$1800"
-              },
-              {
-                "issue_id": "hotel with good reviews",
-                "chosen_option": "hotel with 8+ rating on review sites"
-              },
-              {
-                "issue_id": "Airbnb",
-                "chosen_option": "entire apartment"
-              }
-            ],
-            "timedout": false,
-            "broken": false,
-            "sstp_message_trace": [
-              {
-                "version": "0",
-                "message_id": "87def111-a168-58a8-a99f-32c11e7c349c",
-                "dt_created": "2026-03-24T23:00:40.696438+00:00",
-                "origin": {
-                  "actor_id": "negotiation-server",
-                  "tenant_id": "session-123",
-                  "attestation": null
-                },
-                "semantic_context": {
-                  "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-                  "schema_version": "1.0",
-                  "encoding": "json",
-                  "session_id": "session-123",
-                  "issues": [
-                    "destination",
-                    "somewhere warm",
-                    "$2000 total",
-                    "hotel with good reviews",
-                    "Airbnb"
-                  ],
-                  "options_per_issue": {
-                    "destination": [
-                      "Hawaii",
-                      "Florida",
-                      "Mexico",
-                      "Caribbean"
-                    ],
-                    "somewhere warm": [
-                      "tropical climate",
-                      "desert climate",
-                      "Mediterranean climate",
-                      "subtropical climate"
-                    ],
-                    "$2000 total": [
-                      "$1500",
-                      "$1800",
-                      "$2000",
-                      "$2200"
-                    ],
-                    "hotel with good reviews": [
-                      "4-star hotel",
-                      "5-star hotel",
-                      "hotel with 8+ rating on review sites",
-                      "hotel with excellent customer service"
-                    ],
-                    "Airbnb": [
-                      "entire apartment",
-                      "private room",
-                      "shared space",
-                      "luxury Airbnb"
-                    ]
-                  },
-                  "sao_state": {
-                    "running": true,
-                    "waiting": false,
-                    "started": true,
-                    "step": 0,
-                    "time": 0.0,
-                    "relative_time": 0.0,
-                    "broken": false,
-                    "timedout": false,
-                    "agreement": null,
-                    "results": null,
-                    "n_negotiators": 2,
-                    "has_error": false,
-                    "error_details": "",
-                    "erred_negotiator": "",
-                    "erred_agent": "",
-                    "threads": {},
-                    "last_thread": "",
-                    "left_negotiators": [],
-                    "current_offer": {
-                      "destination": "Mexico",
-                      "somewhere warm": "tropical climate",
-                      "$2000 total": "$1800",
-                      "hotel with good reviews": "hotel with 8+ rating on review sites",
-                      "Airbnb": "entire apartment"
-                    },
-                    "current_proposer": "server",
-                    "current_proposer_agent": null,
-                    "n_acceptances": 0,
-                    "new_offers": [],
-                    "new_offerer_agents": [],
-                    "last_negotiator": null,
-                    "current_data": null,
-                    "new_data": [],
-                    "n_participating": 2
-                  },
-                  "sao_response": null,
-                  "nmi": null
-                },
-                "payload_hash": "117446c4144cfa15f81f978a717295ac502592298887e02826ba5bf10f96f9f6",
-                "policy_labels": {
-                  "sensitivity": "internal",
-                  "propagation": "restricted",
-                  "retention_policy": "default"
-                },
-                "provenance": {
-                  "sources": [],
-                  "transforms": []
-                },
-                "payload": {
-                  "action": "respond",
-                  "participant_id": "alice",
-                  "round": 1,
-                  "n_steps": 20,
-                  "can_counter_offer": false,
-                  "allowed_actions": [
-                    "accept",
-                    "reject"
-                  ],
-                  "is_shadow_call": false,
-                  "current_offer": {
-                    "destination": "Mexico",
-                    "somewhere warm": "tropical climate",
-                    "$2000 total": "$1800",
-                    "hotel with good reviews": "hotel with 8+ rating on review sites",
-                    "Airbnb": "entire apartment"
-                  },
-                  "proposer_id": "server"
-                },
-                "state_object_id": null,
-                "parent_ids": [],
-                "logical_clock": null,
-                "payload_refs": [],
-                "confidence_score": null,
-                "ttl_seconds": null,
-                "merge_strategy": null,
-                "risk_score": null,
-                "kind": "negotiate"
-              },
-              {
-                "version": "0",
-                "message_id": "8137d42d-e488-5587-b58f-7218c5aae6ca",
-                "dt_created": "2026-03-24T23:00:40.696497+00:00",
-                "origin": {
-                  "actor_id": "negotiation-server",
-                  "tenant_id": "session-123",
-                  "attestation": null
-                },
-                "semantic_context": {
-                  "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-                  "schema_version": "1.0",
-                  "encoding": "json",
-                  "session_id": "session-123",
-                  "issues": [
-                    "destination",
-                    "somewhere warm",
-                    "$2000 total",
-                    "hotel with good reviews",
-                    "Airbnb"
-                  ],
-                  "options_per_issue": {
-                    "destination": [
-                      "Hawaii",
-                      "Florida",
-                      "Mexico",
-                      "Caribbean"
-                    ],
-                    "somewhere warm": [
-                      "tropical climate",
-                      "desert climate",
-                      "Mediterranean climate",
-                      "subtropical climate"
-                    ],
-                    "$2000 total": [
-                      "$1500",
-                      "$1800",
-                      "$2000",
-                      "$2200"
-                    ],
-                    "hotel with good reviews": [
-                      "4-star hotel",
-                      "5-star hotel",
-                      "hotel with 8+ rating on review sites",
-                      "hotel with excellent customer service"
-                    ],
-                    "Airbnb": [
-                      "entire apartment",
-                      "private room",
-                      "shared space",
-                      "luxury Airbnb"
-                    ]
-                  },
-                  "sao_state": {
-                    "running": true,
-                    "waiting": false,
-                    "started": true,
-                    "step": 0,
-                    "time": 0.0,
-                    "relative_time": 0.0,
-                    "broken": false,
-                    "timedout": false,
-                    "agreement": null,
-                    "results": null,
-                    "n_negotiators": 2,
-                    "has_error": false,
-                    "error_details": "",
-                    "erred_negotiator": "",
-                    "erred_agent": "",
-                    "threads": {},
-                    "last_thread": "",
-                    "left_negotiators": [],
-                    "current_offer": {
-                      "destination": "Mexico",
-                      "somewhere warm": "tropical climate",
-                      "$2000 total": "$1800",
-                      "hotel with good reviews": "hotel with 8+ rating on review sites",
-                      "Airbnb": "entire apartment"
-                    },
-                    "current_proposer": "server",
-                    "current_proposer_agent": null,
-                    "n_acceptances": 0,
-                    "new_offers": [],
-                    "new_offerer_agents": [],
-                    "last_negotiator": null,
-                    "current_data": null,
-                    "new_data": [],
-                    "n_participating": 2
-                  },
-                  "sao_response": null,
-                  "nmi": null
-                },
-                "payload_hash": "ec29fdc67a7322ddaf6a03f32f1adb7cdf44be1eb2d91d8435301d44c0e1791b",
-                "policy_labels": {
-                  "sensitivity": "internal",
-                  "propagation": "restricted",
-                  "retention_policy": "default"
-                },
-                "provenance": {
-                  "sources": [],
-                  "transforms": []
-                },
-                "payload": {
-                  "action": "respond",
-                  "participant_id": "bob",
-                  "round": 1,
-                  "n_steps": 20,
-                  "can_counter_offer": false,
-                  "allowed_actions": [
-                    "accept",
-                    "reject"
-                  ],
-                  "is_shadow_call": false,
-                  "current_offer": {
-                    "destination": "Mexico",
-                    "somewhere warm": "tropical climate",
-                    "$2000 total": "$1800",
-                    "hotel with good reviews": "hotel with 8+ rating on review sites",
-                    "Airbnb": "entire apartment"
-                  },
-                  "proposer_id": "server"
-                },
-                "state_object_id": null,
-                "parent_ids": [],
-                "logical_clock": null,
-                "payload_refs": [],
-                "confidence_score": null,
-                "ttl_seconds": null,
-                "merge_strategy": null,
-                "risk_score": null,
-                "kind": "negotiate"
-              },
-              {
-                "participant_id": "alice",
-                "action": "reject",
-                "offer": null
-              },
-              {
-                "participant_id": "bob",
-                "action": "reject",
-                "offer": null
-              },
-              {
-                "version": "0",
-                "message_id": "3a4a647b-ec08-5c49-97ce-f0ca17860bc9",
-                "dt_created": "2026-03-24T23:00:55.517068+00:00",
-                "origin": {
-                  "actor_id": "negotiation-server",
-                  "tenant_id": "session-123",
-                  "attestation": null
-                },
-                "semantic_context": {
-                  "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-                  "schema_version": "1.0",
-                  "encoding": "json",
-                  "session_id": "session-123",
-                  "issues": [
-                    "destination",
-                    "somewhere warm",
-                    "$2000 total",
-                    "hotel with good reviews",
-                    "Airbnb"
-                  ],
-                  "options_per_issue": {
-                    "destination": [
-                      "Hawaii",
-                      "Florida",
-                      "Mexico",
-                      "Caribbean"
-                    ],
-                    "somewhere warm": [
-                      "tropical climate",
-                      "desert climate",
-                      "Mediterranean climate",
-                      "subtropical climate"
-                    ],
-                    "$2000 total": [
-                      "$1500",
-                      "$1800",
-                      "$2000",
-                      "$2200"
-                    ],
-                    "hotel with good reviews": [
-                      "4-star hotel",
-                      "5-star hotel",
-                      "hotel with 8+ rating on review sites",
-                      "hotel with excellent customer service"
-                    ],
-                    "Airbnb": [
-                      "entire apartment",
-                      "private room",
-                      "shared space",
-                      "luxury Airbnb"
-                    ]
-                  },
-                  "sao_state": {
-                    "running": true,
-                    "waiting": false,
-                    "started": true,
-                    "step": 1,
-                    "time": 0.0,
-                    "relative_time": 0.05,
-                    "broken": false,
-                    "timedout": false,
-                    "agreement": null,
-                    "results": null,
-                    "n_negotiators": 2,
-                    "has_error": false,
-                    "error_details": "",
-                    "erred_negotiator": "",
-                    "erred_agent": "",
-                    "threads": {},
-                    "last_thread": "",
-                    "left_negotiators": [],
-                    "current_offer": {
-                      "destination": "Mexico",
-                      "somewhere warm": "tropical climate",
-                      "$2000 total": "$1800",
-                      "hotel with good reviews": "hotel with 8+ rating on review sites",
-                      "Airbnb": "entire apartment"
-                    },
-                    "current_proposer": "server",
-                    "current_proposer_agent": null,
-                    "n_acceptances": 0,
-                    "new_offers": [],
-                    "new_offerer_agents": [],
-                    "last_negotiator": null,
-                    "current_data": null,
-                    "new_data": [],
-                    "n_participating": 2
-                  },
-                  "sao_response": null,
-                  "nmi": null
-                },
-                "payload_hash": "972bbfff66f75a0e1f5d5a497bec2c4df72413556995349bea6df23a23a4de9e",
-                "policy_labels": {
-                  "sensitivity": "internal",
-                  "propagation": "restricted",
-                  "retention_policy": "default"
-                },
-                "provenance": {
-                  "sources": [],
-                  "transforms": []
-                },
-                "payload": {
-                  "action": "propose",
-                  "participant_id": "bob",
-                  "round": 2,
-                  "n_steps": 20,
-                  "can_counter_offer": true,
-                  "allowed_actions": [
-                    "counter_offer"
-                  ],
-                  "is_shadow_call": false
-                },
-                "state_object_id": null,
-                "parent_ids": [],
-                "logical_clock": null,
-                "payload_refs": [],
-                "confidence_score": null,
-                "ttl_seconds": null,
-                "merge_strategy": null,
-                "risk_score": null,
-                "kind": "negotiate"
-              },
-              {
-                "participant_id": "bob",
-                "action": "counter_offer",
-                "offer": {
-                  "destination": "Florida",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                }
-              },
-              {
-                "version": "0",
-                "message_id": "b13b2f30-f3d1-5ca0-b4b7-6d3f6fca3e7b",
-                "dt_created": "2026-03-24T23:02:08.061525+00:00",
-                "origin": {
-                  "actor_id": "negotiation-server",
-                  "tenant_id": "session-123",
-                  "attestation": null
-                },
-                "semantic_context": {
-                  "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-                  "schema_version": "1.0",
-                  "encoding": "json",
-                  "session_id": "session-123",
-                  "issues": [
-                    "destination",
-                    "somewhere warm",
-                    "$2000 total",
-                    "hotel with good reviews",
-                    "Airbnb"
-                  ],
-                  "options_per_issue": {
-                    "destination": [
-                      "Hawaii",
-                      "Florida",
-                      "Mexico",
-                      "Caribbean"
-                    ],
-                    "somewhere warm": [
-                      "tropical climate",
-                      "desert climate",
-                      "Mediterranean climate",
-                      "subtropical climate"
-                    ],
-                    "$2000 total": [
-                      "$1500",
-                      "$1800",
-                      "$2000",
-                      "$2200"
-                    ],
-                    "hotel with good reviews": [
-                      "4-star hotel",
-                      "5-star hotel",
-                      "hotel with 8+ rating on review sites",
-                      "hotel with excellent customer service"
-                    ],
-                    "Airbnb": [
-                      "entire apartment",
-                      "private room",
-                      "shared space",
-                      "luxury Airbnb"
-                    ]
-                  },
-                  "sao_state": {
-                    "running": true,
-                    "waiting": false,
-                    "started": true,
-                    "step": 1,
-                    "time": 0.0,
-                    "relative_time": 0.05,
-                    "broken": false,
-                    "timedout": false,
-                    "agreement": null,
-                    "results": null,
-                    "n_negotiators": 2,
-                    "has_error": false,
-                    "error_details": "",
-                    "erred_negotiator": "",
-                    "erred_agent": "",
-                    "threads": {},
-                    "last_thread": "",
-                    "left_negotiators": [],
-                    "current_offer": {
-                      "destination": "Florida",
-                      "somewhere warm": "tropical climate",
-                      "$2000 total": "$1800",
-                      "hotel with good reviews": "hotel with 8+ rating on review sites",
-                      "Airbnb": "entire apartment"
-                    },
-                    "current_proposer": "bob",
-                    "current_proposer_agent": null,
-                    "n_acceptances": 0,
-                    "new_offers": [],
-                    "new_offerer_agents": [],
-                    "last_negotiator": null,
-                    "current_data": null,
-                    "new_data": [],
-                    "n_participating": 2
-                  },
-                  "sao_response": null,
-                  "nmi": null
-                },
-                "payload_hash": "80ea7835c20b9adc7c1778645a50171b4a758ccd29551bff4a3b8ec5cf1b429e",
-                "policy_labels": {
-                  "sensitivity": "internal",
-                  "propagation": "restricted",
-                  "retention_policy": "default"
-                },
-                "provenance": {
-                  "sources": [],
-                  "transforms": []
-                },
-                "payload": {
-                  "action": "respond",
-                  "participant_id": "alice",
-                  "round": 2,
-                  "n_steps": 20,
-                  "can_counter_offer": false,
-                  "allowed_actions": [
-                    "accept",
-                    "reject"
-                  ],
-                  "is_shadow_call": false,
-                  "current_offer": {
-                    "destination": "Florida",
-                    "somewhere warm": "tropical climate",
-                    "$2000 total": "$1800",
-                    "hotel with good reviews": "hotel with 8+ rating on review sites",
-                    "Airbnb": "entire apartment"
-                  },
-                  "proposer_id": "bob"
-                },
-                "state_object_id": null,
-                "parent_ids": [],
-                "logical_clock": null,
-                "payload_refs": [],
-                "confidence_score": null,
-                "ttl_seconds": null,
-                "merge_strategy": null,
-                "risk_score": null,
-                "kind": "negotiate"
-              },
-              {
-                "participant_id": "alice",
-                "action": "accept",
-                "offer": null
-              }
-            ]
-          }
-        },
-        "state_object_id": "session-123",
-        "parent_ids": [
-          ""
-        ],
-        "logical_clock": {
-          "type": "lamport",
-          "value": 2
-        },
-        "payload_refs": [],
-        "confidence_score": 1.0,
-        "ttl_seconds": 86400,
-        "merge_strategy": "add",
-        "risk_score": 0.0,
-        "kind": "commit"
-      }
+      "... (detailed message trace omitted for brevity)"
     ]
   },
+
   "issues": [
     "destination",
     "somewhere warm",
@@ -2002,57 +367,13 @@ Example final response:
     "hotel with good reviews",
     "Airbnb"
   ],
+
   "participant_id_by_name": {
     "Alice": "alice",
     "Bob": "bob"
   },
+
   "final_result": {
-    "version": "0",
-    "message_id": "",
-    "dt_created": "2026-03-24T23:03:29.902839+00:00",
-    "origin": {
-      "actor_id": "negotiation-server",
-      "tenant_id": "session-123",
-      "attestation": null
-    },
-    "semantic_context": {
-      "schema_id": "urn:ioc:schema:negotiate:commit:v1",
-      "schema_version": "1.0",
-      "encoding": "json",
-      "session_id": "session-123",
-      "final_agreement": [
-        {
-          "issue_id": "destination",
-          "chosen_option": "Florida"
-        },
-        {
-          "issue_id": "somewhere warm",
-          "chosen_option": "tropical climate"
-        },
-        {
-          "issue_id": "$2000 total",
-          "chosen_option": "$1800"
-        },
-        {
-          "issue_id": "hotel with good reviews",
-          "chosen_option": "hotel with 8+ rating on review sites"
-        },
-        {
-          "issue_id": "Airbnb",
-          "chosen_option": "entire apartment"
-        }
-      ]
-    },
-    "payload_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-    "policy_labels": {
-      "sensitivity": "internal",
-      "propagation": "restricted",
-      "retention_policy": "default"
-    },
-    "provenance": {
-      "sources": [],
-      "transforms": []
-    },
     "payload": {
       "status": "agreed",
       "session_id": "session-123",
@@ -2070,16 +391,8 @@ Example final response:
               "Airbnb": "entire apartment"
             },
             "decisions": [
-              {
-                "participant_id": "alice",
-                "action": "reject",
-                "offer": null
-              },
-              {
-                "participant_id": "bob",
-                "action": "reject",
-                "offer": null
-              }
+              { "participant_id": "alice", "action": "reject" },
+              { "participant_id": "bob", "action": "reject" }
             ]
           },
           {
@@ -2104,601 +417,55 @@ Example final response:
                   "Airbnb": "entire apartment"
                 }
               },
-              {
-                "participant_id": "alice",
-                "action": "accept",
-                "offer": null
-              }
+              { "participant_id": "alice", "action": "accept" }
             ]
           }
         ],
         "final_agreement": [
-          {
-            "issue_id": "destination",
-            "chosen_option": "Florida"
-          },
-          {
-            "issue_id": "somewhere warm",
-            "chosen_option": "tropical climate"
-          },
-          {
-            "issue_id": "$2000 total",
-            "chosen_option": "$1800"
-          },
-          {
-            "issue_id": "hotel with good reviews",
-            "chosen_option": "hotel with 8+ rating on review sites"
-          },
-          {
-            "issue_id": "Airbnb",
-            "chosen_option": "entire apartment"
-          }
+          { "issue_id": "destination", "chosen_option": "Florida" },
+          { "issue_id": "somewhere warm", "chosen_option": "tropical climate" },
+          { "issue_id": "$2000 total", "chosen_option": "$1800" },
+          { "issue_id": "hotel with good reviews", "chosen_option": "hotel with 8+ rating on review sites" },
+          { "issue_id": "Airbnb", "chosen_option": "entire apartment" }
         ],
         "timedout": false,
         "broken": false,
-        "sstp_message_trace": [
-          {
-            "version": "0",
-            "message_id": "87def111-a168-58a8-a99f-32c11e7c349c",
-            "dt_created": "2026-03-24T23:00:40.696438+00:00",
-            "origin": {
-              "actor_id": "negotiation-server",
-              "tenant_id": "session-123",
-              "attestation": null
-            },
-            "semantic_context": {
-              "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-              "schema_version": "1.0",
-              "encoding": "json",
-              "session_id": "session-123",
-              "issues": [
-                "destination",
-                "somewhere warm",
-                "$2000 total",
-                "hotel with good reviews",
-                "Airbnb"
-              ],
-              "options_per_issue": {
-                "destination": [
-                  "Hawaii",
-                  "Florida",
-                  "Mexico",
-                  "Caribbean"
-                ],
-                "somewhere warm": [
-                  "tropical climate",
-                  "desert climate",
-                  "Mediterranean climate",
-                  "subtropical climate"
-                ],
-                "$2000 total": [
-                  "$1500",
-                  "$1800",
-                  "$2000",
-                  "$2200"
-                ],
-                "hotel with good reviews": [
-                  "4-star hotel",
-                  "5-star hotel",
-                  "hotel with 8+ rating on review sites",
-                  "hotel with excellent customer service"
-                ],
-                "Airbnb": [
-                  "entire apartment",
-                  "private room",
-                  "shared space",
-                  "luxury Airbnb"
-                ]
-              },
-              "sao_state": {
-                "running": true,
-                "waiting": false,
-                "started": true,
-                "step": 0,
-                "time": 0.0,
-                "relative_time": 0.0,
-                "broken": false,
-                "timedout": false,
-                "agreement": null,
-                "results": null,
-                "n_negotiators": 2,
-                "has_error": false,
-                "error_details": "",
-                "erred_negotiator": "",
-                "erred_agent": "",
-                "threads": {},
-                "last_thread": "",
-                "left_negotiators": [],
-                "current_offer": {
-                  "destination": "Mexico",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                },
-                "current_proposer": "server",
-                "current_proposer_agent": null,
-                "n_acceptances": 0,
-                "new_offers": [],
-                "new_offerer_agents": [],
-                "last_negotiator": null,
-                "current_data": null,
-                "new_data": [],
-                "n_participating": 2
-              },
-              "sao_response": null,
-              "nmi": null
-            },
-            "payload_hash": "117446c4144cfa15f81f978a717295ac502592298887e02826ba5bf10f96f9f6",
-            "policy_labels": {
-              "sensitivity": "internal",
-              "propagation": "restricted",
-              "retention_policy": "default"
-            },
-            "provenance": {
-              "sources": [],
-              "transforms": []
-            },
-            "payload": {
-              "action": "respond",
-              "participant_id": "alice",
-              "round": 1,
-              "n_steps": 20,
-              "can_counter_offer": false,
-              "allowed_actions": [
-                "accept",
-                "reject"
-              ],
-              "is_shadow_call": false,
-              "current_offer": {
-                "destination": "Mexico",
-                "somewhere warm": "tropical climate",
-                "$2000 total": "$1800",
-                "hotel with good reviews": "hotel with 8+ rating on review sites",
-                "Airbnb": "entire apartment"
-              },
-              "proposer_id": "server"
-            },
-            "state_object_id": null,
-            "parent_ids": [],
-            "logical_clock": null,
-            "payload_refs": [],
-            "confidence_score": null,
-            "ttl_seconds": null,
-            "merge_strategy": null,
-            "risk_score": null,
-            "kind": "negotiate"
-          },
-          {
-            "version": "0",
-            "message_id": "8137d42d-e488-5587-b58f-7218c5aae6ca",
-            "dt_created": "2026-03-24T23:00:40.696497+00:00",
-            "origin": {
-              "actor_id": "negotiation-server",
-              "tenant_id": "session-123",
-              "attestation": null
-            },
-            "semantic_context": {
-              "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-              "schema_version": "1.0",
-              "encoding": "json",
-              "session_id": "session-123",
-              "issues": [
-                "destination",
-                "somewhere warm",
-                "$2000 total",
-                "hotel with good reviews",
-                "Airbnb"
-              ],
-              "options_per_issue": {
-                "destination": [
-                  "Hawaii",
-                  "Florida",
-                  "Mexico",
-                  "Caribbean"
-                ],
-                "somewhere warm": [
-                  "tropical climate",
-                  "desert climate",
-                  "Mediterranean climate",
-                  "subtropical climate"
-                ],
-                "$2000 total": [
-                  "$1500",
-                  "$1800",
-                  "$2000",
-                  "$2200"
-                ],
-                "hotel with good reviews": [
-                  "4-star hotel",
-                  "5-star hotel",
-                  "hotel with 8+ rating on review sites",
-                  "hotel with excellent customer service"
-                ],
-                "Airbnb": [
-                  "entire apartment",
-                  "private room",
-                  "shared space",
-                  "luxury Airbnb"
-                ]
-              },
-              "sao_state": {
-                "running": true,
-                "waiting": false,
-                "started": true,
-                "step": 0,
-                "time": 0.0,
-                "relative_time": 0.0,
-                "broken": false,
-                "timedout": false,
-                "agreement": null,
-                "results": null,
-                "n_negotiators": 2,
-                "has_error": false,
-                "error_details": "",
-                "erred_negotiator": "",
-                "erred_agent": "",
-                "threads": {},
-                "last_thread": "",
-                "left_negotiators": [],
-                "current_offer": {
-                  "destination": "Mexico",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                },
-                "current_proposer": "server",
-                "current_proposer_agent": null,
-                "n_acceptances": 0,
-                "new_offers": [],
-                "new_offerer_agents": [],
-                "last_negotiator": null,
-                "current_data": null,
-                "new_data": [],
-                "n_participating": 2
-              },
-              "sao_response": null,
-              "nmi": null
-            },
-            "payload_hash": "ec29fdc67a7322ddaf6a03f32f1adb7cdf44be1eb2d91d8435301d44c0e1791b",
-            "policy_labels": {
-              "sensitivity": "internal",
-              "propagation": "restricted",
-              "retention_policy": "default"
-            },
-            "provenance": {
-              "sources": [],
-              "transforms": []
-            },
-            "payload": {
-              "action": "respond",
-              "participant_id": "bob",
-              "round": 1,
-              "n_steps": 20,
-              "can_counter_offer": false,
-              "allowed_actions": [
-                "accept",
-                "reject"
-              ],
-              "is_shadow_call": false,
-              "current_offer": {
-                "destination": "Mexico",
-                "somewhere warm": "tropical climate",
-                "$2000 total": "$1800",
-                "hotel with good reviews": "hotel with 8+ rating on review sites",
-                "Airbnb": "entire apartment"
-              },
-              "proposer_id": "server"
-            },
-            "state_object_id": null,
-            "parent_ids": [],
-            "logical_clock": null,
-            "payload_refs": [],
-            "confidence_score": null,
-            "ttl_seconds": null,
-            "merge_strategy": null,
-            "risk_score": null,
-            "kind": "negotiate"
-          },
-          {
-            "participant_id": "alice",
-            "action": "reject",
-            "offer": null
-          },
-          {
-            "participant_id": "bob",
-            "action": "reject",
-            "offer": null
-          },
-          {
-            "version": "0",
-            "message_id": "3a4a647b-ec08-5c49-97ce-f0ca17860bc9",
-            "dt_created": "2026-03-24T23:00:55.517068+00:00",
-            "origin": {
-              "actor_id": "negotiation-server",
-              "tenant_id": "session-123",
-              "attestation": null
-            },
-            "semantic_context": {
-              "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-              "schema_version": "1.0",
-              "encoding": "json",
-              "session_id": "session-123",
-              "issues": [
-                "destination",
-                "somewhere warm",
-                "$2000 total",
-                "hotel with good reviews",
-                "Airbnb"
-              ],
-              "options_per_issue": {
-                "destination": [
-                  "Hawaii",
-                  "Florida",
-                  "Mexico",
-                  "Caribbean"
-                ],
-                "somewhere warm": [
-                  "tropical climate",
-                  "desert climate",
-                  "Mediterranean climate",
-                  "subtropical climate"
-                ],
-                "$2000 total": [
-                  "$1500",
-                  "$1800",
-                  "$2000",
-                  "$2200"
-                ],
-                "hotel with good reviews": [
-                  "4-star hotel",
-                  "5-star hotel",
-                  "hotel with 8+ rating on review sites",
-                  "hotel with excellent customer service"
-                ],
-                "Airbnb": [
-                  "entire apartment",
-                  "private room",
-                  "shared space",
-                  "luxury Airbnb"
-                ]
-              },
-              "sao_state": {
-                "running": true,
-                "waiting": false,
-                "started": true,
-                "step": 1,
-                "time": 0.0,
-                "relative_time": 0.05,
-                "broken": false,
-                "timedout": false,
-                "agreement": null,
-                "results": null,
-                "n_negotiators": 2,
-                "has_error": false,
-                "error_details": "",
-                "erred_negotiator": "",
-                "erred_agent": "",
-                "threads": {},
-                "last_thread": "",
-                "left_negotiators": [],
-                "current_offer": {
-                  "destination": "Mexico",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                },
-                "current_proposer": "server",
-                "current_proposer_agent": null,
-                "n_acceptances": 0,
-                "new_offers": [],
-                "new_offerer_agents": [],
-                "last_negotiator": null,
-                "current_data": null,
-                "new_data": [],
-                "n_participating": 2
-              },
-              "sao_response": null,
-              "nmi": null
-            },
-            "payload_hash": "972bbfff66f75a0e1f5d5a497bec2c4df72413556995349bea6df23a23a4de9e",
-            "policy_labels": {
-              "sensitivity": "internal",
-              "propagation": "restricted",
-              "retention_policy": "default"
-            },
-            "provenance": {
-              "sources": [],
-              "transforms": []
-            },
-            "payload": {
-              "action": "propose",
-              "participant_id": "bob",
-              "round": 2,
-              "n_steps": 20,
-              "can_counter_offer": true,
-              "allowed_actions": [
-                "counter_offer"
-              ],
-              "is_shadow_call": false
-            },
-            "state_object_id": null,
-            "parent_ids": [],
-            "logical_clock": null,
-            "payload_refs": [],
-            "confidence_score": null,
-            "ttl_seconds": null,
-            "merge_strategy": null,
-            "risk_score": null,
-            "kind": "negotiate"
-          },
-          {
-            "participant_id": "bob",
-            "action": "counter_offer",
-            "offer": {
-              "destination": "Florida",
-              "somewhere warm": "tropical climate",
-              "$2000 total": "$1800",
-              "hotel with good reviews": "hotel with 8+ rating on review sites",
-              "Airbnb": "entire apartment"
-            }
-          },
-          {
-            "version": "0",
-            "message_id": "b13b2f30-f3d1-5ca0-b4b7-6d3f6fca3e7b",
-            "dt_created": "2026-03-24T23:02:08.061525+00:00",
-            "origin": {
-              "actor_id": "negotiation-server",
-              "tenant_id": "session-123",
-              "attestation": null
-            },
-            "semantic_context": {
-              "schema_id": "urn:ioc:schema:negotiate:negmas-sao:v1",
-              "schema_version": "1.0",
-              "encoding": "json",
-              "session_id": "session-123",
-              "issues": [
-                "destination",
-                "somewhere warm",
-                "$2000 total",
-                "hotel with good reviews",
-                "Airbnb"
-              ],
-              "options_per_issue": {
-                "destination": [
-                  "Hawaii",
-                  "Florida",
-                  "Mexico",
-                  "Caribbean"
-                ],
-                "somewhere warm": [
-                  "tropical climate",
-                  "desert climate",
-                  "Mediterranean climate",
-                  "subtropical climate"
-                ],
-                "$2000 total": [
-                  "$1500",
-                  "$1800",
-                  "$2000",
-                  "$2200"
-                ],
-                "hotel with good reviews": [
-                  "4-star hotel",
-                  "5-star hotel",
-                  "hotel with 8+ rating on review sites",
-                  "hotel with excellent customer service"
-                ],
-                "Airbnb": [
-                  "entire apartment",
-                  "private room",
-                  "shared space",
-                  "luxury Airbnb"
-                ]
-              },
-              "sao_state": {
-                "running": true,
-                "waiting": false,
-                "started": true,
-                "step": 1,
-                "time": 0.0,
-                "relative_time": 0.05,
-                "broken": false,
-                "timedout": false,
-                "agreement": null,
-                "results": null,
-                "n_negotiators": 2,
-                "has_error": false,
-                "error_details": "",
-                "erred_negotiator": "",
-                "erred_agent": "",
-                "threads": {},
-                "last_thread": "",
-                "left_negotiators": [],
-                "current_offer": {
-                  "destination": "Florida",
-                  "somewhere warm": "tropical climate",
-                  "$2000 total": "$1800",
-                  "hotel with good reviews": "hotel with 8+ rating on review sites",
-                  "Airbnb": "entire apartment"
-                },
-                "current_proposer": "bob",
-                "current_proposer_agent": null,
-                "n_acceptances": 0,
-                "new_offers": [],
-                "new_offerer_agents": [],
-                "last_negotiator": null,
-                "current_data": null,
-                "new_data": [],
-                "n_participating": 2
-              },
-              "sao_response": null,
-              "nmi": null
-            },
-            "payload_hash": "80ea7835c20b9adc7c1778645a50171b4a758ccd29551bff4a3b8ec5cf1b429e",
-            "policy_labels": {
-              "sensitivity": "internal",
-              "propagation": "restricted",
-              "retention_policy": "default"
-            },
-            "provenance": {
-              "sources": [],
-              "transforms": []
-            },
-            "payload": {
-              "action": "respond",
-              "participant_id": "alice",
-              "round": 2,
-              "n_steps": 20,
-              "can_counter_offer": false,
-              "allowed_actions": [
-                "accept",
-                "reject"
-              ],
-              "is_shadow_call": false,
-              "current_offer": {
-                "destination": "Florida",
-                "somewhere warm": "tropical climate",
-                "$2000 total": "$1800",
-                "hotel with good reviews": "hotel with 8+ rating on review sites",
-                "Airbnb": "entire apartment"
-              },
-              "proposer_id": "bob"
-            },
-            "state_object_id": null,
-            "parent_ids": [],
-            "logical_clock": null,
-            "payload_refs": [],
-            "confidence_score": null,
-            "ttl_seconds": null,
-            "merge_strategy": null,
-            "risk_score": null,
-            "kind": "negotiate"
-          },
-          {
-            "participant_id": "alice",
-            "action": "accept",
-            "offer": null
-          }
-        ]
+        "sstp_message_trace": ["... (detailed trace omitted)"]
       }
     },
-    "state_object_id": "session-123",
-    "parent_ids": [
-      ""
-    ],
-    "logical_clock": {
-      "type": "lamport",
-      "value": 2
-    },
-    "payload_refs": [],
-    "confidence_score": 1.0,
-    "ttl_seconds": 86400,
-    "merge_strategy": "add",
-    "risk_score": 0.0,
-    "kind": "commit"
+    "...": "other metadata fields omitted"
   }
 }
 ```
+
+**Key fields**:
+- `status`: "agreed" - negotiation successfully completed
+- `result.agreement`: Final agreed-upon values for all issues
+- `result.steps`: Total negotiation steps (2)
+- `result.round_decisions`: Complete history of all participant decisions per round
+  - **Round 1**: Both agents rejected server's initial proposal (Mexico)
+  - **Round 2**: Bob counter-offered with Florida; Alice accepted
+- `trace.rounds`: Detailed breakdown of each negotiation round with proposals and decisions
+- `trace.final_agreement`: The reached agreement on all 5 issues
+
+---
+
+## Summary
+
+This example demonstrates a successful 2-round negotiation:
+
+1. **Round 1**: Server proposes Mexico vacation → Both agents reject
+2. **Round 2**: Bob counter-proposes Florida vacation → Alice accepts
+
+**Final Agreement**:
+- **Destination**: Florida
+- **Climate**: Tropical
+- **Budget**: $1,800
+- **Accommodation**: Hotel with 8+ rating
+- **Type**: Entire apartment
+
+The negotiation flow showcases:
+- ✅ Issue extraction from natural language
+- ✅ Multi-round negotiation with reject/counter-offer cycles
+- ✅ Complete traceability of all decisions
+- ✅ Successful agreement reached
