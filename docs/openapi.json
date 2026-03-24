@@ -1,6 +1,54 @@
 {
   "components": {
     "schemas": {
+      "Agent": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Agent",
+        "type": "object"
+      },
+      "AgentReply": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "offer": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer"
+          },
+          "participant_id": {
+            "title": "Participant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "participant_id",
+          "action"
+        ],
+        "title": "AgentReply",
+        "type": "object"
+      },
       "CreateOrUpdateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -62,6 +110,27 @@
           "response_id"
         ],
         "title": "CreateOrUpdateResponse",
+        "type": "object"
+      },
+      "DecideRequest": {
+        "properties": {
+          "agent_replies": {
+            "items": {
+              "$ref": "#/components/schemas/AgentReply"
+            },
+            "title": "Agent Replies",
+            "type": "array"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "agent_replies"
+        ],
+        "title": "DecideRequest",
         "type": "object"
       },
       "ExtractionPayload": {
@@ -150,6 +219,44 @@
           }
         },
         "title": "Header",
+        "type": "object"
+      },
+      "InitiateNegotiationRequest": {
+        "properties": {
+          "agents_raw": {
+            "items": {
+              "$ref": "#/components/schemas/Agent"
+            },
+            "title": "Agents Raw",
+            "type": "array"
+          },
+          "content_text": {
+            "title": "Content Text",
+            "type": "string"
+          },
+          "n_steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 20,
+            "title": "N Steps"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "content_text",
+          "agents_raw"
+        ],
+        "title": "InitiateNegotiationRequest",
         "type": "object"
       },
       "QueryRequest": {
@@ -300,6 +407,108 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/decide": {
+      "post": {
+        "operationId": "decide_negotiation_api_workspaces__workspace_id__multi_agentic_systems__mas_id__semantic_negotiation_decide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Negotiation",
+        "tags": [
+          "semantic-negotiation"
+        ]
+      }
+    },
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/start": {
+      "post": {
+        "operationId": "start_negotiation_api_workspaces__workspace_id__multi_agentic_systems__mas_id__semantic_negotiation_start_post",
+        "parameters": [
+          {
+            "description": "Workspace ID",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "description": "Workspace ID",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Multi-Agentic System ID",
+            "in": "path",
+            "name": "mas_id",
+            "required": true,
+            "schema": {
+              "description": "Multi-Agentic System ID",
+              "title": "Mas Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitiateNegotiationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Negotiation",
+        "tags": [
+          "semantic-negotiation"
+        ]
+      }
+    },
     "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/shared-memories": {
       "post": {
         "operationId": "create_or_update_shared_memories_api_workspaces__workspace_id__multi_agentic_systems__mas_id__shared_memories_post",
