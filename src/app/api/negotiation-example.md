@@ -328,7 +328,7 @@ Example response:
 }
 ```
 
-2. Both agents rejected the offer:
+2. Both agents considered the initial offer, but they both rejected it:
 
 ```
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
@@ -481,6 +481,7 @@ Example response:
   ]
 }
 ```
+> Note: only "bob" is allowed to "counter_offer"
 
 3. Bob's counteroffer:
 ```bash
@@ -647,7 +648,9 @@ Example response:
 }
 ```
 
-4. Now Alice accepts the offer:
+> Note: only "alice" is allowed to "accept" or "reject"
+
+4. Alice accepts the offer:
 
 ```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
