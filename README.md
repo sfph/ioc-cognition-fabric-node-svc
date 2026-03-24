@@ -48,7 +48,7 @@ DB_PASSWORD=postgresPW
 DB_HOST=localhost
 DB_PORT=5456
 AZURE_OPENAI_ENDPOINT=<AZURE_OPENAI_ENDPOINT> # replace with your LLM credentials
-AZURE_OPENAI_API_KEY=<AZURE_OPENAI_ENDPOINT> # replace with your LLM credentials
+AZURE_OPENAI_API_KEY=<AZURE_OPENAI_API_KEY> # replace with your LLM credentials
 AZURE_OPENAI_DEPLOYMENT=<AZURE_OPENAI_DEPLOYMENT> # replace with your LLM credentials
 AZURE_OPENAI_API_VERSION=<AZURE_OPENAI_API_VERSION> # replace with your LLM credentials
 ```
