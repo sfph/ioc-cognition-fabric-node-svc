@@ -6,16 +6,6 @@ from pydantic import BaseModel
 from semantic_negotiation.app.agent.semantic_negotiation import SemanticNegotiationPipeline
 
 
-scenario = """
-Alice wants to plan a vacation trip. She is flexible on the destination
-but prefers somewhere warm. Her budget is limited to $2000 total.
-She wants to stay in a hotel with good reviews.
-
-Bob is helping her plan the trip. He suggests considering both the
-destination and accommodation type. He thinks an Airbnb might offer
-better value than a hotel.
-"""
-
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
