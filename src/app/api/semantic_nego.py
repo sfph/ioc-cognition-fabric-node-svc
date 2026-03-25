@@ -70,4 +70,5 @@ def decide_negotiation(req: DecideRequest):
         )
         return result
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
