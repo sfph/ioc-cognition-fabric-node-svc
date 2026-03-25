@@ -1,0 +1,94 @@
+**Create or Update Shared Memories** - Store or update concepts and relationships for inter-agent communication
+
+This API accepts both Otel Trace and Open Claw output.
+
+Example with [Otel Trace](../tests/testdata/otel.json):
+```bash
+cat tests/testdata/otel.json | jq -s '{
+  "header": {
+    "agent_id": "agent-1"
+  },
+  "payload": {
+    "metadata": {
+      "format": "observe-sdk-otel"
+    },
+    "data": .[0]
+  }
+}' | curl -X POST \
+  http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas_otel/shared-memories \
+  -H "Content-Type: application/json" \
+  --data-binary @-
+
+# Response (201 Created):
+# {
+#   "response_id": "9af99ba5-e8aa-47aa-a217-b87dd928ac59",
+#   "message": "Successfully saved 10 nodes and 16 edges to graph 'graph_mas_otel'"
+# }
+```
+
+Example with [OpenClaw output](../tests/testdata/openclaw.json):
+
+```bash
+cat tests/testdata/openclaw.json | jq -s '{
+  "header": {
+    "agent_id": "agent-1",
+  },
+  "payload": {
+    "metadata": {
+      "format": "openclaw"
+    },
+    "data": .[0]
+  }
+}' | curl -X POST \
+  http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas_openclaw/shared-memories \
+  -H "Content-Type: application/json" \
+  --data-binary @-
+
+# Response (201 Created):
+# {
+#   "response_id": "9af99ba5-e8aa-47aa-a217-b87dd928ac59",
+#   "message": "Successfully saved 15 nodes and 17 edges to graph 'graph_mas_openclaw'"
+# }
+```
+
+**Fetch Shared Memories** - Query stored memories for agent coordination
+
+Query from Otel graph:
+
+```bash
+curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas_otel/shared-memories/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "header": {
+      "agent_id": "agent-1"
+    },
+    "search_strategy": "semantic_graph_traversal",
+    "intent": "what does the website_selector_agent do?"
+  }' | jq
+
+# Response (200 OK):
+#{
+#  "response_id": "d414f287-aa78-4a79-9e9e-8c7c7226a3eb",
+#  "message": "The website_selector_agent performs internet searches using the search_serper function to identify relevant websites."
+#}
+```
+
+Query from the Openclaw graph:
+
+```bash
+curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas_openclaw/shared-memories/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "header": {
+      "agent_id": "agent-1"
+    },
+    "search_strategy": "semantic_graph_traversal",
+    "intent": "Tell me something about Q2 budget planning"
+  }' | jq
+
+# Response (200 OK):
+#{
+#  "response_id": "4252795b-70ca-4101-8de5-8a5b944fbe35",
+#  "message": "The Q2 budget planning session is constrained by a total budget of $200,000. Alex, the Head of Engineering, is advocating for a $95,000 allocation, while Sam, the Head of Sales, is advocating for a $90,000 allocation."
+#}
+```
