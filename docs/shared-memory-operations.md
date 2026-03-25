@@ -16,7 +16,7 @@ Send a payload to persist concepts/relationships.
 Source: [tests/testdata/otel.json](../tests/testdata/otel.json)
 
 ```bash
-cat tests/testdata/otel.json | jq -s '{
+cat ../tests/testdata/otel.json | jq -s '{
   "header": {
     "agent_id": "agent-1"
   },
@@ -43,7 +43,7 @@ cat tests/testdata/otel.json | jq -s '{
 Source: [tests/testdata/openclaw.json](../tests/testdata/openclaw.json)
 
 ```bash
-cat tests/testdata/openclaw.json | jq -s '{
+cat ../tests/testdata/openclaw.json | jq -s '{
   "header": {
     "agent_id": "agent-1"
   },
