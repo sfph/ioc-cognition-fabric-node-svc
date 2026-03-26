@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "Agent": {
+        "description": "Participant metadata for a semantic negotiation session.",
         "properties": {
           "id": {
             "title": "Id",
@@ -20,9 +21,19 @@
         "type": "object"
       },
       "AgentReply": {
+        "description": "A single agent reply used to advance an existing session.",
         "properties": {
           "action": {
+            "enum": [
+              "accept",
+              "reject",
+              "counter_offer"
+            ],
             "title": "Action",
+            "type": "string"
+          },
+          "agent_id": {
+            "title": "Agent Id",
             "type": "string"
           },
           "offer": {
@@ -36,14 +47,10 @@
               }
             ],
             "title": "Offer"
-          },
-          "participant_id": {
-            "title": "Participant Id",
-            "type": "string"
           }
         },
         "required": [
-          "participant_id",
+          "agent_id",
           "action"
         ],
         "title": "AgentReply",
@@ -113,6 +120,7 @@
         "type": "object"
       },
       "DecideRequest": {
+        "description": "Request body to advance an existing semantic negotiation session.",
         "properties": {
           "agent_replies": {
             "items": {
@@ -222,12 +230,13 @@
         "type": "object"
       },
       "InitiateNegotiationRequest": {
+        "description": "Request body to start a new semantic negotiation session.",
         "properties": {
-          "agents_raw": {
+          "agents": {
             "items": {
               "$ref": "#/components/schemas/Agent"
             },
-            "title": "Agents Raw",
+            "title": "Agents",
             "type": "array"
           },
           "content_text": {
@@ -254,7 +263,7 @@
         "required": [
           "session_id",
           "content_text",
-          "agents_raw"
+          "agents"
         ],
         "title": "InitiateNegotiationRequest",
         "type": "object"
@@ -409,7 +418,32 @@
   "paths": {
     "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/decide": {
       "post": {
+        "description": "Advance a semantic negotiation session.\n\nRoute:\n    POST /workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/decide\n\nBody:\n    See :class:`DecideRequest`.\n\nReturns:\n    The pipeline execution result (shape defined by the semantic negotiation library).\n\nErrors:\n    - 404 if the session does not exist (start it first).\n    - 400 for input validation errors raised by the pipeline.\n\nNotes:\n    ``workspace_id`` and ``mas_id`` are currently included for route consistency with\n    other APIs, but ``session_id`` is assumed globally unique (not scoped by workspace/mas).",
         "operationId": "decide_negotiation_api_workspaces__workspace_id__multi_agentic_systems__mas_id__semantic_negotiation_decide_post",
+        "parameters": [
+          {
+            "description": "Workspace ID",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "description": "Workspace ID",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Multi-Agentic System ID",
+            "in": "path",
+            "name": "mas_id",
+            "required": true,
+            "schema": {
+              "description": "Multi-Agentic System ID",
+              "title": "Mas Id",
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -448,6 +482,7 @@
     },
     "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/start": {
       "post": {
+        "description": "Start a semantic negotiation session.\n\nRoute:\n    POST /workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/start\n\nBody:\n    See :class:`InitiateNegotiationRequest`.\n\nReturns:\n    The pipeline execution result (shape defined by the semantic negotiation library).\n\nNotes:\n    ``workspace_id`` and ``mas_id`` are currently included for route consistency with\n    other APIs, but ``session_id`` is assumed globally unique (not scoped by workspace/mas).",
         "operationId": "start_negotiation_api_workspaces__workspace_id__multi_agentic_systems__mas_id__semantic_negotiation_start_post",
         "parameters": [
           {
