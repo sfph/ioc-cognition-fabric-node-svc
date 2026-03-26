@@ -5,6 +5,7 @@ This example demonstrates a multi-round negotiation between two agents (Alice an
 ## Overview
 
 Alice and Bob are negotiating vacation plans with conflicting preferences:
+
 - **Alice**: Flexible on destination, prefers warm weather, $2000 budget, wants hotel with good reviews
 - **Bob**: Suggests considering different accommodation types, thinks Airbnb offers better value
 
@@ -13,11 +14,13 @@ The negotiation explores 5 issues with multiple options each, going through roun
 ## How Semantic Negotiation Works
 
 **Available Actions:**
+
 - **accept**: Agree to the current proposal
 - **reject**: Decline the current proposal
-- **counter_offer**: Propose an alternative solution
+- **counter_offer**: Propose an alternative solution (requires an `offer` object)
 
 **Negotiation Flow:**
+
 - **Round 1**: The server makes an initial proposal. All participants can only `accept` or `reject`.
 - **Round 2+**: When all participants reject, the system randomly selects one participant to make a `counter_offer`.
 - **After Counter-Offer**: Once a participant submits a counter-offer, the system asks other participants to `accept` or `reject` the new proposal.
@@ -25,19 +28,24 @@ The negotiation explores 5 issues with multiple options each, going through roun
 
 ---
 
-## Step 1: Start Negotiation
+## Step 1: Start negotiation
 
-**What happens**: Initialize the negotiation session by providing the context, agents, and maximum negotiation rounds. The system extracts issues from the text and generates possible options for each issue.
+**What happens**: Initialize a negotiation session by providing the context, agents, and maximum number of steps. The system extracts issues from the text and generates possible options for each issue.
 
-### Request
+### API
+
+`POST /workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/start`
+
+### Request (example)
 
 ```bash
-curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/start \
+curl -X POST \
+  http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/start \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "session-123",
-    "content_text": "Alice wants to plan a vacation trip. She is flexible on the destination but prefers somewhere warm. Her budget is limited to $2000 total.She wants to stay in a hotel with good reviews. Bob is helping her plan the trip. He suggests considering both the destination and accommodation type. He thinks an Airbnb might offer better value than a hotel.",
-    "agents_raw": [
+    "content_text": "Alice wants to plan a vacation trip. She is flexible on the destination but prefers somewhere warm. Her budget is limited to $2000 total. She wants to stay in a hotel with good reviews. Bob is helping her plan the trip. He suggests considering both the destination and accommodation type. He thinks an Airbnb might offer better value than a hotel.",
+    "agents": [
       {"id": "alice", "name": "Alice"},
       {"id": "bob", "name": "Bob"}
     ],
@@ -45,9 +53,10 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
   }' | jq
 ```
 
-### Response
+### Response (example)
 
 **What you get**: The negotiation is initiated with extracted issues, possible options, and initial messages for both agents to respond to the server's initial proposal.
+
 ```json
 {
   "status": "initiated",
@@ -113,6 +122,7 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 ```
 
 **Key fields**:
+
 - `status`: "initiated" - negotiation has started
 - `issues`: List of topics being negotiated
 - `options_per_issue`: Possible values for each issue
@@ -120,11 +130,15 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 
 ---
 
-## Step 2: Both Agents Consider and Reject the Offer
+## Step 2: Both agents reject the offer
 
-**What happens**: Both Alice and Bob review the initial proposal (Mexico, tropical climate, $1800, etc.), consider it carefully, but ultimately decide to reject it. The system processes their rejections and moves to the next round.
+**What happens**: Both Alice and Bob review the initial proposal and reject it. The system processes their replies and advances the session.
 
-### Request
+### Endpoint
+
+`POST /workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/semantic-negotiation/decide`
+
+### Request (example)
 
 ```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
@@ -133,20 +147,21 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
     "session_id": "session-123",
     "agent_replies": [
       {
-        "participant_id": "alice",
+        "agent_id": "alice",
         "action": "reject"
       },
       {
-        "participant_id": "bob",
+        "agent_id": "bob",
         "action": "reject"
       }
     ]
   }' | jq
 ```
 
-### Response
+### Response (example)
 
 **What you get**: Since both agents rejected, the negotiation continues to round 2. The system randomly selects Bob to make a counter-offer.
+
 ```json
 {
   "status": "ongoing",
@@ -168,6 +183,7 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 ```
 
 **Key fields**:
+
 - `status`: "ongoing" - negotiation continues
 - `round`: 2 - moved to next round after rejections
 - `action`: "propose" - Bob is randomly selected to make a counter-offer
@@ -178,11 +194,11 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 
 ---
 
-## Step 3: Bob Makes a Counter-Offer
+## Step 3: Bob makes a counter-offer
 
 **What happens**: Bob (the randomly selected participant) submits a counter-offer, proposing an alternative - changing the destination from Mexico to Florida while keeping other terms similar. After receiving Bob's counter-offer, the system will then ask Alice to respond.
 
-### Request
+### Request (example)
 
 ```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
@@ -191,7 +207,7 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
     "session_id": "session-123",
     "agent_replies": [
       {
-        "participant_id": "bob",
+        "agent_id": "bob",
         "action": "counter_offer",
         "offer": {
           "destination": "Florida",
@@ -205,9 +221,10 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
   }' | jq
 ```
 
-### Response
+### Response (example)
 
 **What you get**: Bob's counter-offer is recorded, and Alice is now asked to respond (accept or reject) to Bob's new proposal.
+
 ```json
 {
   "status": "ongoing",
@@ -237,6 +254,7 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 ```
 
 **Key fields**:
+
 - `status`: "ongoing" - still negotiating
 - `round`: 2 - same round
 - `action`: "respond" - Alice must respond to Bob's proposal
@@ -251,7 +269,7 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 
 **What happens**: Alice reviews Bob's counter-offer and decides to accept it, completing the negotiation successfully.
 
-### Request
+### Request (example)
 
 ```bash
 curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1/semantic-negotiation/decide \
@@ -260,14 +278,14 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
     "session_id": "session-123",
     "agent_replies": [
       {
-        "participant_id": "alice",
+        "agent_id": "alice",
         "action": "accept"
       }
     ]
   }' | jq
 ```
 
-### Response
+### Response (example)
 
 **What you get**: The negotiation concludes with an agreement. The response includes the final agreement, the complete negotiation trace with all rounds, and participant decisions.
 
@@ -439,6 +457,7 @@ curl -X POST http://localhost:9002/api/workspaces/ws1/multi-agentic-systems/mas1
 ```
 
 **Key fields**:
+
 - `status`: "agreed" - negotiation successfully completed
 - `result.agreement`: Final agreed-upon values for all issues
 - `result.steps`: Total negotiation steps (2)
@@ -458,6 +477,7 @@ This example demonstrates a successful 2-round negotiation:
 2. **Round 2**: Bob counter-proposes Florida vacation → Alice accepts
 
 **Final Agreement**:
+
 - **Destination**: Florida
 - **Climate**: Tropical
 - **Budget**: $1,800
@@ -465,6 +485,7 @@ This example demonstrates a successful 2-round negotiation:
 - **Type**: Entire apartment
 
 The negotiation flow showcases:
+
 - ✅ Issue extraction from natural language
 - ✅ Multi-round negotiation with reject/counter-offer cycles
 - ✅ Complete traceability of all decisions
