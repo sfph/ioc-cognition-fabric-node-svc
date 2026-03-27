@@ -4,8 +4,9 @@
 
 from fastapi.testclient import TestClient
 
+from src.app.config.config import SERVICE_NAME
 from src.app.main import create_app
-from src.app.utils.utils import service_name, get_app_version
+from src.app.utils.utils import get_app_version
 
 
 def test_health_endpoint():
@@ -18,7 +19,7 @@ def test_health_endpoint():
     data = response.json()
 
     assert data["status"] == "healthy"
-    assert data["service"] == service_name
+    assert data["service"] == SERVICE_NAME
     assert data["version"] == get_app_version()
 
 

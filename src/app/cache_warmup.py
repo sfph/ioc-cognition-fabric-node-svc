@@ -13,6 +13,7 @@ from ingestion.app.agent.concept_vector_store import ConceptVectorStore
 from knowledge_memory.server.database.graph_db.agensgraph.src.db import GraphDB
 from knowledge_memory.server.schemas.knowledge_graph import Concept, EmbeddingConfig
 
+from src.app.config.config import MGMT_URL
 from src.app.utils.mgmt_plane_client import fetch_cfn_summary
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ async def query_all_concepts_for_mas(mas_id: str) -> List[Concept]:
     Raises:
         Exception: If database query fails
     """
+
     def _sync_query():
         """Synchronous database query (run in thread pool)."""
         db = GraphDB()
@@ -73,13 +75,17 @@ async def query_all_concepts_for_mas(mas_id: str) -> List[Concept]:
 
                     # Parse embedding data
                     embeddings = None
-                    if "embedding_vector" in node_props and "embedding_model" in node_props:
+                    if (
+                        "embedding_vector" in node_props
+                        and "embedding_model" in node_props
+                    ):
                         embedding_vector = node_props.get("embedding_vector", [])
                         embedding_model = node_props.get("embedding_model", "")
 
                         # Handle JSON string parsing if needed
                         if isinstance(embedding_vector, str):
                             import json
+
                             try:
                                 embedding_vector = json.loads(embedding_vector)
                             except (json.JSONDecodeError, ValueError):
@@ -87,14 +93,14 @@ async def query_all_concepts_for_mas(mas_id: str) -> List[Concept]:
 
                         if embedding_vector:
                             embeddings = EmbeddingConfig(
-                                data=embedding_vector,
-                                name=embedding_model
+                                data=embedding_vector, name=embedding_model
                             )
 
                     # Parse tags if present
                     tags = node_props.get("tags", [])
                     if isinstance(tags, str):
                         import json
+
                         try:
                             tags = json.loads(tags)
                         except (json.JSONDecodeError, ValueError):
@@ -106,11 +112,21 @@ async def query_all_concepts_for_mas(mas_id: str) -> List[Concept]:
                         name=node_props.get("name", ""),
                         description=node_props.get("description"),
                         attributes={
-                            k: v for k, v in node_props.items()
-                            if k not in ["id", "name", "description", "embedding_vector", "embedding_model", "embeddings", "tags"]
+                            k: v
+                            for k, v in node_props.items()
+                            if k
+                            not in [
+                                "id",
+                                "name",
+                                "description",
+                                "embedding_vector",
+                                "embedding_model",
+                                "embeddings",
+                                "tags",
+                            ]
                         },
                         embeddings=embeddings,
-                        tags=tags
+                        tags=tags,
                     )
                     concepts.append(concept)
 
@@ -123,7 +139,7 @@ async def query_all_concepts_for_mas(mas_id: str) -> List[Concept]:
         except Exception as exc:
             logger.error(
                 f"Failed to query graph {graph_name}: {type(exc).__name__}: {exc}",
-                exc_info=True
+                exc_info=True,
             )
             raise
 
@@ -237,8 +253,7 @@ async def populate_faiss_cache_for_mas(
         concept_dicts = transform_concepts_to_vector_store_format(concepts)
 
         concepts_with_embeddings = sum(
-            1 for c in concept_dicts
-            if c.get("attributes", {}).get("embedding")
+            1 for c in concept_dicts if c.get("attributes", {}).get("embedding")
         )
         logger.debug(
             f"MAS {mas_id}: {concepts_with_embeddings}/{len(concept_dicts)} "
@@ -258,7 +273,7 @@ async def populate_faiss_cache_for_mas(
     except Exception as exc:
         logger.error(
             f"Cache warmup failed for MAS {mas_id}: {type(exc).__name__}: {exc}",
-            exc_info=True
+            exc_info=True,
         )
         raise
 
@@ -293,7 +308,6 @@ def debug_cache_manager_state(
 
 
 async def warm_all_faiss_caches(
-    mgmt_url: str,
     cfn_id: str,
     cache_manager: CachingLayerManager,
     embed_fn: Callable,
@@ -305,18 +319,15 @@ async def warm_all_faiss_caches(
     and warms the cache for each MAS by loading concepts from knowledge graph.
 
     Args:
-        mgmt_url: Management plane base URL (e.g., "http://localhost:9000")
         cfn_id: Cognition Fabric Node ID
         cache_manager: The global CachingLayerManager instance
         embed_fn: Embedding function for the cache layers
     """
-    logger.info(
-        f"Starting FAISS cache warmup for CFN {cfn_id}"
-    )
+    logger.info(f"Starting FAISS cache warmup for CFN {cfn_id}")
 
     # Fetch CFN summary from management plane
     try:
-        summary = await fetch_cfn_summary(mgmt_url, cfn_id)
+        summary = await fetch_cfn_summary(cfn_id)
         logger.debug("Fetched CFN summary from management plane")
     except Exception as exc:
         logger.error(f"Failed to fetch CFN summary: {exc}")
@@ -326,9 +337,7 @@ async def warm_all_faiss_caches(
     mas_ids = extract_mas_ids_from_summary(summary)
 
     if not mas_ids:
-        logger.warning(
-            "No MAS found in CFN configuration, skipping cache warmup"
-        )
+        logger.warning("No MAS found in CFN configuration, skipping cache warmup")
         return
 
     logger.info(f"Found {len(mas_ids)} MAS to warm: {mas_ids}")

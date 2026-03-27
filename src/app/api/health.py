@@ -4,7 +4,8 @@
 
 from fastapi import APIRouter
 
-from src.app.utils.utils import service_name, get_app_version
+from src.app.config.config import SERVICE_NAME
+from src.app.utils.utils import get_app_version
 
 router = APIRouter(tags=["health"])
 
@@ -13,6 +14,6 @@ router = APIRouter(tags=["health"])
 async def health():
     return {
         "status": "healthy",
-        "service": service_name,
+        "service": SERVICE_NAME,
         "version": get_app_version(),
     }

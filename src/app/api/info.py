@@ -7,6 +7,8 @@ from typing import Dict, Any
 
 from fastapi import APIRouter
 
+from src.app.config.config import GIT_COMMIT_SHA, GIT_COMMIT_TIME, GIT_BRANCH
+
 router = APIRouter(tags=[""])
 
 
@@ -19,9 +21,9 @@ async def diagnostics_info():
     return {
         "git": {
             "commit": {
-                "time": os.environ.get("GIT_COMMIT_TIME", "unknown"),
-                "id": os.environ.get("GIT_COMMIT_SHA", "unknown"),
+                "time": GIT_COMMIT_TIME,
+                "id": GIT_COMMIT_SHA,
             },
-            "branch": os.environ.get("GIT_BRANCH", "unknown"),
+            "branch": GIT_BRANCH,
         }
     }

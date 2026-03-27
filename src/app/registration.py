@@ -12,11 +12,17 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from src.app.utils.utils import service_name
+from src.app.config.config import (
+    DISABLE_REGISTRATION,
+    MGMT_URL,
+    CFN_NAME,
+    APP_PORT,
+    SERVICE_NAME,
+    HEARTBEAT_INTERVAL_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
-DISABLE_REGISTRATION = os.getenv("DISABLE_REGISTRATION", "").lower() == "true"
 
 # ----------------------------
 # Global CFN State
@@ -40,7 +46,7 @@ def get_outbound_ip() -> str:
         logger.warning(
             "Failed to determine outbound IP, using the service name address for it"
         )
-        return os.environ.get("SERVICE_NAME", service_name)
+        return SERVICE_NAME
 
 
 async def refresh_config(mgmt_url: str) -> None:
@@ -77,14 +83,14 @@ async def refresh_config(mgmt_url: str) -> None:
             logger.warning("RefreshConfig response missing config key")
 
 
-async def start_heartbeat(mgmt_url: str, stop_event: asyncio.Event) -> None:
+async def start_heartbeat(stop_event: asyncio.Event) -> None:
     if not CfnID:
         logger.error("heartbeat started without CfnID")
         return
 
-    heartbeat_url = f"{mgmt_url}/api/cognition-fabric-nodes/{CfnID}/heartbeat"
+    heartbeat_url = f"{MGMT_URL}/api/cognition-fabric-nodes/{CfnID}/heartbeat"
 
-    interval_seconds = int(os.environ.get("HEARTBEAT_INTERVAL_SECONDS", "29"))
+    interval_seconds = int(HEARTBEAT_INTERVAL_SECONDS)
 
     logger.info("starting heartbeat to %s", heartbeat_url)
 
@@ -125,7 +131,7 @@ async def start_heartbeat(mgmt_url: str, stop_event: asyncio.Event) -> None:
                                     current_ts,
                                 )
                                 try:
-                                    await refresh_config(mgmt_url)
+                                    await refresh_config(MGMT_URL)
                                 except Exception as exc:
                                     logger.error("failed to refresh config: %s", exc)
 
@@ -148,7 +154,6 @@ async def start_heartbeat(mgmt_url: str, stop_event: asyncio.Event) -> None:
 # ----------------------------
 async def register_on_startup(
     *,
-    app_port: int,
     stop_event: asyncio.Event,
 ) -> None:
     """
@@ -160,24 +165,23 @@ async def register_on_startup(
 
     global CfnID, CfnConfig, CfnTimestamp
 
-    mgmt_url = os.environ.get("MGMT_URL", "http://localhost:9000")
-    cfn_name = os.environ.get("CFN_NAME", "cfn-local")
+    app_port = int(APP_PORT)
     app_ip = get_outbound_ip()
 
-    if not mgmt_url:
+    if not MGMT_URL:
         raise RuntimeError("MGMT_URL not set")
 
-    if not cfn_name or not app_ip or not app_port:
+    if not CFN_NAME or not app_ip or not app_port:
         raise RuntimeError(
             f"registration prereqs missing: "
-            f"cfnName={cfn_name!r} appIP={app_ip!r} appPort={app_port}"
+            f"cfnName={CFN_NAME!r} appIP={app_ip!r} appPort={app_port}"
         )
 
-    register_url = f"{mgmt_url}/api/cognition-fabric-nodes/register"
+    register_url = f"{MGMT_URL}/api/cognition-fabric-nodes/register"
     logger.info("registering CFN at %s", register_url)
 
     payload = {
-        "cfn_name": cfn_name,
+        "cfn_name": CFN_NAME,
         "ip_address": app_ip,
         "port": app_port,
     }
@@ -217,7 +221,7 @@ async def register_on_startup(
     logger.info(
         "CFN registered successfully: cfn_id=%s cfn_name=%s ip_address=%s port=%d config=%s timestamp=%s",
         CfnID,
-        cfn_name,
+        CFN_NAME,
         app_ip,
         app_port,
         CfnConfig,
@@ -225,4 +229,4 @@ async def register_on_startup(
     )
 
     # Start heartbeat in background
-    asyncio.create_task(start_heartbeat(mgmt_url, stop_event))
+    asyncio.create_task(start_heartbeat(stop_event))

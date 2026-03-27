@@ -38,6 +38,13 @@ from src.app.api.schemas import (
     QueryRequest,
     CreateOrUpdateResponse,
 )
+from src.app.config.config import (
+    AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_KEY,
+    AZURE_OPENAI_API_VERSION,
+    AZURE_OPENAI_DEPLOYMENT,
+    APP_PORT,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -125,7 +132,6 @@ def transform_concept_attributes(attrs: Dict[str, Any]) -> Dict[str, Any]:
 
     # Required / known field
     out["concept_type"] = attrs.get("conceptType")
-
 
     # Extra attributes
     for k, v in attrs.get("extra", {}).items():
@@ -225,10 +231,10 @@ async def create_or_update_shared_memories(
 
     # Initialize services (requires Azure OpenAI credentials)
     concept_service = ConceptRelationshipExtractionService(
-        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-        azure_api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-        azure_api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
-        azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        azure_api_key=AZURE_OPENAI_API_KEY,
+        azure_api_version=AZURE_OPENAI_API_VERSION,
+        azure_deployment=AZURE_OPENAI_DEPLOYMENT,
     )
 
     result = concept_service.extract_concepts_and_relationships(
@@ -310,7 +316,7 @@ async def fetch_shared_memories(
     )
 
     repo = HttpDataRepository(
-        base_url=f"http://localhost:{os.environ.get('PORT', '9002')}",
+        base_url=f"http://localhost:{APP_PORT}",
         workspace_id=workspace_id,
         mas_id=mas_id,
     )
