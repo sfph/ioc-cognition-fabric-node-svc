@@ -38,8 +38,13 @@ from src.app.api.schemas import (
     QueryRequest,
     CreateOrUpdateResponse,
 )
-from src.app.config.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, \
-    AZURE_OPENAI_API_VERSION, AZURE_OPENAI_DEPLOYMENT, APP_PORT
+from src.app.config.config import (
+    AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_KEY,
+    AZURE_OPENAI_API_VERSION,
+    AZURE_OPENAI_DEPLOYMENT,
+    APP_PORT,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

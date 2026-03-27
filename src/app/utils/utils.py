@@ -49,4 +49,3 @@ def get_app_version() -> str:
 def bootstrap_env() -> None:
     if os.environ.get("ENV", "").lower() != "prod":
         load_dotenv(dotenv_path=f"{get_repo_root()}/env.conf", override=False)
-

@@ -12,8 +12,14 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from src.app.config.config import DISABLE_REGISTRATION, MGMT_URL, CFN_NAME, \
-    APP_PORT, SERVICE_NAME, HEARTBEAT_INTERVAL_SECONDS
+from src.app.config.config import (
+    DISABLE_REGISTRATION,
+    MGMT_URL,
+    CFN_NAME,
+    APP_PORT,
+    SERVICE_NAME,
+    HEARTBEAT_INTERVAL_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +210,8 @@ async def register_on_startup(
     if not isinstance(cfn_id, str) or not cfn_id:
         raise RuntimeError("registration response missing cfn_id")
 
+    CfnID = cfn_id
+
     async with cfn_config_lock:
         cfg_blob = result.get("config")
         if isinstance(cfg_blob, dict):
@@ -212,7 +220,7 @@ async def register_on_startup(
 
     logger.info(
         "CFN registered successfully: cfn_id=%s cfn_name=%s ip_address=%s port=%d config=%s timestamp=%s",
-        cfn_id,
+        CfnID,
         CFN_NAME,
         app_ip,
         app_port,
