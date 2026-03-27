@@ -1,5 +1,20 @@
 import os
 
+
+def get_required_env(name: str) -> str:
+    value = os.environ.get(name)
+    if value is None or value.strip() == "":
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
+def validate_db_config() -> None:
+    get_required_env("DB_NAME")
+    get_required_env("DB_USER")
+    get_required_env("DB_PASSWORD")
+    get_required_env("DB_HOST")
+    get_required_env("DB_PORT")
+
 # General configurations
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "info").upper()
 DISABLE_REGISTRATION = os.getenv("DISABLE_REGISTRATION", "").lower() == "true"
@@ -17,7 +32,7 @@ DB_NAME = os.environ.get("DB_NAME")
 DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
-DB_PORT = os.environ.get("DB_PORT", 5456)
+DB_PORT = os.environ.get("DB_PORT")
 
 # LLM credentials
 AZURE_OPENAI_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT")

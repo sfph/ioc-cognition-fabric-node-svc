@@ -26,19 +26,10 @@ from src.app.utils.mgmt_plane_client import fetch_all_cfn_nodes
 from src.app.utils.utils import get_app_version
 from src.logger.logger import setup_logging
 
-from src.app.config.config import (
-    MGMT_URL,
-    APP_PORT,
-    WARMUP_TIMEOUT_SECONDS,
-    CFN_NAME,
-    DB_NAME,
-    DB_USER,
-    DB_HOST,
-    DB_PASSWORD,
-    DB_PORT,
-    LOG_LEVEL,
-    SERVICE_NAME,
-)
+from src.app.config.config import (MGMT_URL, APP_PORT, WARMUP_TIMEOUT_SECONDS,
+                                   CFN_NAME, DB_NAME, DB_USER, DB_HOST,
+                                   DB_PASSWORD, DB_PORT, LOG_LEVEL,
+                                   SERVICE_NAME, validate_db_config, )
 
 from knowledge_memory.bootstrap.database import DatabaseManager
 from knowledge_memory.bootstrap.provider import register_provider
@@ -167,6 +158,8 @@ async def cognition_engine_lifespan(app: FastAPI):
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
+    validate_db_config()
+
     await register_on_startup(stop_event=stop_event)
 
     provider_config = {
