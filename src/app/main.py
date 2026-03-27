@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from src.app.utils.utils import bootstrap_env
+
+bootstrap_env()
+
 import asyncio
 import os
 from contextlib import asynccontextmanager
@@ -9,8 +13,6 @@ import uvicorn
 import logging
 
 from caching.app.agent.caching_layer_manager import CachingLayerManager
-from dotenv import load_dotenv
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from gateway import register_both_engines
@@ -21,8 +23,13 @@ from src.app.api.router import router as api_router
 from src.app.registration import register_on_startup, get_outbound_ip
 from src.app.cache_warmup import warm_all_faiss_caches
 from src.app.utils.mgmt_plane_client import fetch_all_cfn_nodes
-from src.app.utils.utils import REPO_ROOT, service_name, get_app_version
+from src.app.utils.utils import get_app_version
 from src.logger.logger import setup_logging
+
+from src.app.config.config import (MGMT_URL, APP_PORT, WARMUP_TIMEOUT_SECONDS,
+                                   CFN_NAME, DB_NAME, DB_USER, DB_HOST,
+                                   DB_PASSWORD, DB_PORT, LOG_LEVEL,
+                                   SERVICE_NAME, )
 
 from knowledge_memory.bootstrap.database import DatabaseManager
 from knowledge_memory.bootstrap.provider import register_provider
@@ -74,9 +81,9 @@ async def km_lifespan(
 @asynccontextmanager
 async def cognition_engine_lifespan(app: FastAPI):
     await register_both_engines(
-        mgmt_plane_url=os.environ.get("MGMT_URL", "http://localhost:9000"),
+        mgmt_plane_url=MGMT_URL,
         engine_host=get_outbound_ip(),
-        engine_port=int(os.environ.get("PORT", 9002)),
+        engine_port=int(APP_PORT),
     )
 
     embedding_manager = EmbeddingManager()
@@ -90,7 +97,6 @@ async def cognition_engine_lifespan(app: FastAPI):
     # Create manager instead of single layer for mas_id-based isolation
     cache_manager = CachingLayerManager()
 
-
     app.state.embedding_manager = embedding_manager
     # Cache Manager for Graph
     app.state.cache_manager = cache_manager
@@ -103,35 +109,32 @@ async def cognition_engine_lifespan(app: FastAPI):
     app.state.settings = Settings()
 
     # Warm FAISS caches for all MAS (blocking to ensure cache is ready)
-    warmup_timeout = int(os.environ.get("WARMUP_TIMEOUT_SECONDS", "300"))
+    warmup_timeout = int(WARMUP_TIMEOUT_SECONDS)
 
     async def warmup_task():
-        mgmt_url = os.environ.get("MGMT_URL", "http://localhost:9000")
-        cfn_name = os.environ.get("CFN_NAME", "cfn-local")
-
         logger.info(
-            f"FAISS cache warmup: Looking up CFN by name '{cfn_name}' from {mgmt_url}"
+            f"FAISS cache warmup: Looking up CFN by name '{CFN_NAME}' from {MGMT_URL}"
         )
 
         # Fetch all CFN nodes and find ours by name
-        cfn_list = await fetch_all_cfn_nodes(mgmt_url)
+        cfn_list = await fetch_all_cfn_nodes()
         matching_cfn = None
 
         for node in cfn_list.get("nodes", []):
-            if node.get("cfn_name") == cfn_name:
+            if node.get("cfn_name") == CFN_NAME:
                 matching_cfn = node
                 break
 
         if not matching_cfn:
             logger.warning(
-                f"FAISS cache warmup: Skipped - No CFN found with name '{cfn_name}'. "
+                f"FAISS cache warmup: Skipped - No CFN found with name '{CFN_NAME}'. "
                 f"Found {len(cfn_list.get('nodes', []))} CFN(s) but none matched."
             )
             return
 
         cfn_id = matching_cfn.get("cfn_id")
-        logger.debug(f"FAISS cache warmup: Found CFN '{cfn_name}' (id={cfn_id})")
-        await warm_all_faiss_caches(mgmt_url, cfn_id, cache_manager, embed_fn)
+        logger.debug(f"FAISS cache warmup: Found CFN '{CFN_NAME}' (id={cfn_id})")
+        await warm_all_faiss_caches(cfn_id, cache_manager, embed_fn)
 
     try:
         logger.info(f"Starting cache warmup with {warmup_timeout}s timeout")
@@ -144,7 +147,7 @@ async def cognition_engine_lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(
             f"FAISS cache warmup: Failed to initialize - {type(exc).__name__}: {exc}",
-            exc_info=True
+            exc_info=True,
         )
 
     try:
@@ -155,26 +158,23 @@ async def cognition_engine_lifespan(app: FastAPI):
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    await register_on_startup(
-        app_port=int(os.environ.get("PORT", 9002)),
-        stop_event=stop_event,
-    )
+    await register_on_startup(stop_event=stop_event)
 
     provider_config = {
         "provider_name": "ioc-memory-provider",
         "description": "Memory provider with graph + vector support",
         "service_host": get_outbound_ip(),
-        "service_port": os.environ.get("PORT", "9002"),
-        "registration_url": os.environ.get("MGMT_URL", "localhost:9002"),
+        "service_port": APP_PORT,
+        "registration_url": MGMT_URL,
     }
 
     async with km_lifespan(
         app,
-        db_name=os.environ.get("DB_NAME"),
-        user=os.environ.get("DB_USER"),
-        password=os.environ.get("DB_PASSWORD"),
-        host=os.environ.get("DB_HOST"),
-        port=int(os.environ.get("DB_PORT", 5432)),
+        db_name=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=int(DB_PORT),
         register_provider_enabled=True,
         provider_config=provider_config,
     ):
@@ -185,17 +185,13 @@ async def app_lifespan(app: FastAPI):
 
 
 def create_app(*, lifespan=None) -> FastAPI:
-    # Load env first
-    if os.environ.get("ENV", "").lower() != "prod":
-        load_dotenv(dotenv_path=f"{REPO_ROOT}/env.conf", override=False)
-
     # Configure logging once
-    setup_logging(service_name)
+    setup_logging(SERVICE_NAME)
     logger = logging.getLogger(__name__)
     logger.info("Environment variables loaded")
 
     app = FastAPI(
-        title=f"{service_name} API",
+        title=f"{SERVICE_NAME} API",
         version=get_app_version(),
         description="IoC Cognition Fabrics Node Service API",
         docs_url="/docs",
@@ -221,10 +217,8 @@ def create_app(*, lifespan=None) -> FastAPI:
 app = create_app()
 
 if __name__ == "__main__":
-    log_level = os.environ.get("LOG_LEVEL", "DEBUG").upper()
-    logging.basicConfig(level=getattr(logging, log_level))
+    logging.basicConfig(level=getattr(logging, LOG_LEVEL))
 
     version = get_app_version()
 
-    port = int(os.environ.get("PORT", 9002))
-    uvicorn.run(app, host="0.0.0.0", port=port, log_config=None)
+    uvicorn.run(app, host="0.0.0.0", port=int(APP_PORT), log_config=None)

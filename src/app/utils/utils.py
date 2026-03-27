@@ -5,6 +5,8 @@
 import os
 import tomllib
 
+from dotenv import load_dotenv
+
 
 def get_repo_root() -> str:
     """Get the repository root path by locating pyproject.toml.
@@ -36,7 +38,7 @@ def get_app_version() -> str:
 
     # Fall back to reading from pyproject.toml
     try:
-        pyproject_path = os.path.join(REPO_ROOT, "pyproject.toml")
+        pyproject_path = os.path.join(get_repo_root(), "pyproject.toml")
         with open(pyproject_path, "rb") as f:
             data = tomllib.load(f)
             return data.get("project", {}).get("version", "0.0.0")
@@ -44,7 +46,7 @@ def get_app_version() -> str:
         return "0.0.0"
 
 
-# Module-level constant for repository root
-REPO_ROOT = get_repo_root()
+def bootstrap_env() -> None:
+    if os.environ.get("ENV", "").lower() != "prod":
+        load_dotenv(dotenv_path=f"{get_repo_root()}/env.conf", override=False)
 
-service_name = os.environ.get("SERVICE_NAME", "ioc-cfn-svc")

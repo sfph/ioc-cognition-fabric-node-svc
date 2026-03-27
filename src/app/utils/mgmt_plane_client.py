@@ -6,18 +6,18 @@
 
 import logging
 from typing import Any, Dict
-
 import httpx
+
+from src.app.config.config import MGMT_URL
 
 logger = logging.getLogger(__name__)
 
 
-async def fetch_all_cfn_nodes(mgmt_url: str) -> Dict[str, Any]:
+async def fetch_all_cfn_nodes() -> Dict[str, Any]:
     """
     Fetch list of all CFN nodes from management plane API.
 
-    Args:
-        mgmt_url: Management plane base URL (e.g., "http://localhost:9000")
+    Args: None
 
     Returns:
         Response dict containing:
@@ -37,7 +37,7 @@ async def fetch_all_cfn_nodes(mgmt_url: str) -> Dict[str, Any]:
     Raises:
         RuntimeError: If API call fails
     """
-    list_url = f"{mgmt_url}/api/cognition-fabric-nodes"
+    list_url = f"{MGMT_URL}/api/cognition-fabric-nodes"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(
@@ -53,12 +53,11 @@ async def fetch_all_cfn_nodes(mgmt_url: str) -> Dict[str, Any]:
     return resp.json()
 
 
-async def fetch_cfn_summary(mgmt_url: str, cfn_id: str) -> Dict[str, Any]:
+async def fetch_cfn_summary(cfn_id: str) -> Dict[str, Any]:
     """
     Fetch CFN summary from management plane API.
 
     Args:
-        mgmt_url: Management plane base URL (e.g., "http://localhost:9000")
         cfn_id: Cognition Fabric Node ID
 
     Returns:
@@ -85,7 +84,7 @@ async def fetch_cfn_summary(mgmt_url: str, cfn_id: str) -> Dict[str, Any]:
             ...
         }
     """
-    summary_url = f"{mgmt_url}/api/cognition-fabric-nodes/{cfn_id}/summary"
+    summary_url = f"{MGMT_URL}/api/cognition-fabric-nodes/{cfn_id}/summary"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(
