@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 import logging
 
-from caching.app.agent import CachingLayer
+from caching.app.agent.caching_layer_manager import CachingLayerManager
 from dotenv import load_dotenv
 
 from fastapi import FastAPI
@@ -19,6 +19,8 @@ from ingestion.app.config.settings import Settings
 
 from src.app.api.router import router as api_router
 from src.app.registration import register_on_startup, get_outbound_ip
+from src.app.cache_warmup import warm_all_faiss_caches
+from src.app.utils.mgmt_plane_client import fetch_all_cfn_nodes
 from src.app.utils.utils import REPO_ROOT, service_name, get_app_version
 from src.logger.logger import setup_logging
 
@@ -85,15 +87,65 @@ async def cognition_engine_lifespan(app: FastAPI):
             raise ValueError("Embedding returned None")
         return out
 
-    cache_layer = CachingLayer(
-        vector_dimension=384,  # bge-small-en-v1.5 dimension
-        metric="l2",
-        embed_fn=embed_fn,
-    )
+    # Create manager instead of single layer for mas_id-based isolation
+    cache_manager = CachingLayerManager()
+
 
     app.state.embedding_manager = embedding_manager
-    app.state.cache_layer = cache_layer
+    # Cache Manager for Graph
+    app.state.cache_manager = cache_manager
+    app.state.embed_fn = embed_fn  # Store for layer creation
+
+    # TODO: These are for RAG usage and aren't currently used.
+    rag_cache_manager = CachingLayerManager()
+    app.state.rag_cache_manager = rag_cache_manager
+
     app.state.settings = Settings()
+
+    # Warm FAISS caches for all MAS (blocking to ensure cache is ready)
+    warmup_timeout = int(os.environ.get("WARMUP_TIMEOUT_SECONDS", "300"))
+
+    async def warmup_task():
+        mgmt_url = os.environ.get("MGMT_URL", "http://localhost:9000")
+        cfn_name = os.environ.get("CFN_NAME", "cfn-local")
+
+        logger.info(
+            f"FAISS cache warmup: Looking up CFN by name '{cfn_name}' from {mgmt_url}"
+        )
+
+        # Fetch all CFN nodes and find ours by name
+        cfn_list = await fetch_all_cfn_nodes(mgmt_url)
+        matching_cfn = None
+
+        for node in cfn_list.get("nodes", []):
+            if node.get("cfn_name") == cfn_name:
+                matching_cfn = node
+                break
+
+        if not matching_cfn:
+            logger.warning(
+                f"FAISS cache warmup: Skipped - No CFN found with name '{cfn_name}'. "
+                f"Found {len(cfn_list.get('nodes', []))} CFN(s) but none matched."
+            )
+            return
+
+        cfn_id = matching_cfn.get("cfn_id")
+        logger.debug(f"FAISS cache warmup: Found CFN '{cfn_name}' (id={cfn_id})")
+        await warm_all_faiss_caches(mgmt_url, cfn_id, cache_manager, embed_fn)
+
+    try:
+        logger.info(f"Starting cache warmup with {warmup_timeout}s timeout")
+        await asyncio.wait_for(warmup_task(), timeout=warmup_timeout)
+    except asyncio.TimeoutError:
+        logger.warning(
+            f"Cache warmup timed out after {warmup_timeout}s. "
+            f"Service will start with empty cache. Set WARMUP_TIMEOUT_SECONDS to increase."
+        )
+    except Exception as exc:
+        logger.error(
+            f"FAISS cache warmup: Failed to initialize - {type(exc).__name__}: {exc}",
+            exc_info=True
+        )
 
     try:
         yield

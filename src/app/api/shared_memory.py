@@ -4,6 +4,7 @@ import json
 import os
 
 from caching.app.agent import CachingLayer
+from caching.app.agent.caching_layer_manager import CachingLayerManager
 from evidence.app.agent.evidence import process_evidence
 from evidence.app.api.schemas import (
     ReasonerCognitionRequest,
@@ -42,8 +43,77 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def get_cache_layer(request: Request):
-    return request.app.state.cache_layer
+def get_cache_manager(request: Request) -> CachingLayerManager:
+    """Get the global cache manager."""
+    return request.app.state.cache_manager
+
+
+def get_embed_fn(request: Request):
+    """Get the embedding function."""
+    return request.app.state.embed_fn
+
+
+def get_cache_layer_for_mas(
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
+    manager: CachingLayerManager = Depends(get_cache_manager),
+    embed_fn=Depends(get_embed_fn),
+) -> CachingLayer:
+    """Get or create an isolated cache layer for the given mas_id.
+
+    This dependency automatically extracts mas_id from the path and
+    retrieves/creates the appropriate cache layer.
+
+    Args:
+        mas_id: Multi-Agentic System ID for isolation
+        manager: The CachingLayerManager instance
+        embed_fn: Embedding function for the cache layer (required for text-based
+                  similarity queries)
+
+    Returns:
+        CachingLayer instance isolated to this mas_id
+    """
+    cache = manager.get_cache(mas_id)
+    if cache is None:
+        logger.info(f"Cache miss: Creating new cache layer for mas_id={mas_id}")
+        cache = manager.create_cache(
+            cache_id=mas_id,
+            vector_dimension=384,  # bge-small-en-v1.5 dimension
+            metric="l2",
+            embed_fn=embed_fn,  # Required for text-based similarity search
+        )
+    else:
+        logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
+    return cache
+
+
+def get_cache_layer_for_query(
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
+    manager: CachingLayerManager = Depends(get_cache_manager),
+) -> CachingLayer:
+    """Get cache layer for query operations (read-only).
+
+    Returns 404 if cache doesn't exist for the MAS, indicating no data
+    has been stored yet.
+
+    Args:
+        mas_id: Multi-Agentic System ID for isolation
+        manager: The CachingLayerManager instance
+
+    Returns:
+        CachingLayer instance isolated to this mas_id
+
+    Raises:
+        HTTPException: 404 if no cache exists for this MAS
+    """
+    cache = manager.get_cache(mas_id)
+    if cache is None:
+        logger.warning(f"No cache found for mas_id={mas_id}, no data in shared memory")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No shared memory data found for MAS {mas_id}. Create memories first.",
+        )
+    logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
+    return cache
 
 
 def json_escape_string(value: str) -> str:
@@ -55,6 +125,7 @@ def transform_concept_attributes(attrs: Dict[str, Any]) -> Dict[str, Any]:
 
     # Required / known field
     out["concept_type"] = attrs.get("conceptType")
+
 
     # Extra attributes
     for k, v in attrs.get("extra", {}).items():
@@ -136,8 +207,9 @@ async def create_or_update_shared_memories(
     body: CreateOrUpdateRequest = Body(...),
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
-    cache_layer: CachingLayer = Depends(get_cache_layer),
+    cache_layer: CachingLayer = Depends(get_cache_layer_for_mas),
 ):
+
     request_id = body.request_id
     agent_id = body.header.agent_id if body.header else None
 
@@ -217,8 +289,9 @@ async def fetch_shared_memories(
     body: QueryRequest = Body(...),
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
-    cache_layer: CachingLayer = Depends(get_cache_layer),
+    cache_layer: CachingLayer = Depends(get_cache_layer_for_query),
 ):
+
     request_id = body.request_id
     agent_id = body.header.agent_id if body.header else None
 

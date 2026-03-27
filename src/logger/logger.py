@@ -118,6 +118,10 @@ def setup_logging(service_name: str, default_level: str = "INFO") -> None:
     root.setLevel(python_level)
     root.handlers = [handler]
 
+    # Suppress noisy httpx INFO logs (heartbeat, etc.)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 
 def get_loggers_info() -> Dict[str, Any]:
     """
