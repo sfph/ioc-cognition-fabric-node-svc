@@ -15,9 +15,11 @@ def validate_db_config() -> None:
     get_required_env("DB_HOST")
     get_required_env("DB_PORT")
 
+
 # General configurations
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "info").upper()
 DISABLE_REGISTRATION = os.getenv("DISABLE_REGISTRATION", "").lower() == "true"
+DISABLE_VALIDATION = os.getenv("DISABLE_VALIDATION", "true").lower() == "true"
 
 APP_PORT = os.environ.get("PORT", "9002")
 CFN_NAME = os.environ.get("CFN_NAME", "cfn-local")
@@ -26,6 +28,7 @@ SERVICE_NAME = os.environ.get("SERVICE_NAME", "ioc-cfn-svc")
 WARMUP_TIMEOUT_SECONDS = os.environ.get("WARMUP_TIMEOUT_SECONDS", "300")
 HEARTBEAT_INTERVAL_SECONDS = os.environ.get("HEARTBEAT_INTERVAL_SECONDS", "29")
 MGMT_URL = os.environ.get("MGMT_URL", "http://localhost:9000")
+
 
 # DB configurations
 DB_NAME = os.environ.get("DB_NAME")
