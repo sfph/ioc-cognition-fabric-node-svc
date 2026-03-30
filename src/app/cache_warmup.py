@@ -169,7 +169,9 @@ def extract_mas_ids_from_summary(summary: Dict[str, Any]) -> List[str]:
                 mas_ids.append(mas_id)
         workspace_to_masids[workspace.get("id")] = mas_ids
 
-    logger.debug(f"Workspace to MAS IDs: {workspace_to_masids}", )
+    logger.debug(
+        f"Workspace to MAS IDs: {workspace_to_masids}",
+    )
     return mas_ids
 
 

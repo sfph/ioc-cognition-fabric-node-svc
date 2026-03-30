@@ -19,7 +19,7 @@ def validate_db_config() -> None:
 # General configurations
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "info").upper()
 DISABLE_REGISTRATION = os.getenv("DISABLE_REGISTRATION", "").lower() == "true"
-DISABLE_VALIDATION = os.getenv("DISABLE_VALIDATION", "").lower() == "true"
+DISABLE_VALIDATION = os.getenv("DISABLE_VALIDATION", "true").lower() == "true"
 
 APP_PORT = os.environ.get("PORT", "9002")
 CFN_NAME = os.environ.get("CFN_NAME", "cfn-local")

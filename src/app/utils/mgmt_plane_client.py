@@ -188,7 +188,7 @@ async def check_workspace_and_mas(
             client=client,
             url=workspace_url,
             not_found_detail=f"Workspace '{workspace_id}' not found. "
-                             f"Please visit {MGMT_URL}/api/docs for creating a workspace.",
+            f"Please visit {MGMT_URL}/api/docs for creating a workspace.",
             server_error_detail=(
                 f"Internal Server Error while validating workspace: '{workspace_id}'."
             ),
@@ -200,7 +200,7 @@ async def check_workspace_and_mas(
             client=client,
             url=mas_url,
             not_found_detail=f"MAS '{mas_id}' not found under workspace '{workspace_id}'. "
-                             f"Please visit {MGMT_URL}/api/docs for creating a MAS under the workspace.",
+            f"Please visit {MGMT_URL}/api/docs for creating a MAS under the workspace.",
             server_error_detail=(
                 f"Internal Server Error while validating MAS '{mas_id}' "
                 f"under workspace {workspace_id}."

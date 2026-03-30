@@ -206,7 +206,7 @@ def create_app(*, lifespan=None) -> FastAPI:
         title=f"{SERVICE_NAME} API",
         version=get_app_version(),
         description="IoC Cognition Fabrics Node Service API",
-        docs_url="/api/docs", # along API docs path with mgmt-plane-service
+        docs_url="/api/docs",  # along API docs path with mgmt-plane-service
         openapi_url="/openapi.json",
         lifespan=lifespan or app_lifespan,
     )
