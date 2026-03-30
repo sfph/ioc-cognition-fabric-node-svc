@@ -158,6 +158,7 @@ def extract_mas_ids_from_summary(summary: Dict[str, Any]) -> List[str]:
         List of MAS IDs
     """
     mas_ids = []
+    workspace_to_masids = {}
 
     # Navigate: summary -> config -> workspaces -> multi_agentic_systems
     config = summary.get("config", {})
@@ -166,8 +167,9 @@ def extract_mas_ids_from_summary(summary: Dict[str, Any]) -> List[str]:
             mas_id = mas.get("id")
             if mas_id:
                 mas_ids.append(mas_id)
+        workspace_to_masids[workspace.get("id")] = mas_ids
 
-    logger.debug(f"Extracted {len(mas_ids)} MAS IDs from summary: {mas_ids}")
+    logger.debug(f"Workspace to MAS IDs: {workspace_to_masids}", )
     return mas_ids
 
 
