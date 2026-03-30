@@ -5,7 +5,6 @@ import os
 
 from caching.app.agent import CachingLayer
 from caching.app.agent.caching_layer_manager import CachingLayerManager
-from evidence.app.agent.evidence import process_evidence
 from evidence.app.api.schemas import (
     ReasonerCognitionRequest,
     Header,
@@ -300,6 +299,8 @@ async def fetch_shared_memories(
     cache_layer: CachingLayer = Depends(get_cache_layer_for_query),
     _: None = Depends(check_workspace_and_mas),
 ):
+    # Avoid importing heavy runtime dependencies at module load time
+    from evidence.app.agent.evidence import process_evidence
 
     request_id = body.request_id
     agent_id = body.header.agent_id if body.header else None
