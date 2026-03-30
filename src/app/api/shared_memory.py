@@ -45,6 +45,7 @@ from src.app.config.config import (
     AZURE_OPENAI_DEPLOYMENT,
     APP_PORT,
 )
+from src.app.utils.mgmt_plane_client import check_workspace_and_mas
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -214,6 +215,7 @@ async def create_or_update_shared_memories(
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     cache_layer: CachingLayer = Depends(get_cache_layer_for_mas),
+    _: None = Depends(check_workspace_and_mas),
 ):
 
     request_id = body.request_id
@@ -296,6 +298,7 @@ async def fetch_shared_memories(
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     cache_layer: CachingLayer = Depends(get_cache_layer_for_query),
+    _: None = Depends(check_workspace_and_mas),
 ):
 
     request_id = body.request_id
@@ -368,6 +371,7 @@ async def get_neighbors_by_id(
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     concept_id: str = ApiPath(..., description="Concept ID"),
+    _: None = Depends(check_workspace_and_mas),
 ):
     logger.info(
         "Querying neighbors | workspace=%s, mas=%s, concept_id=%s",
@@ -416,6 +420,7 @@ async def fetch_concepts_by_ids(
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     request_body: ConceptsByIdsRequest = Body(..., description="Concepts IDs"),
+    _: None = Depends(check_workspace_and_mas),
 ):
     logger.info(
         "Querying concepts | workspace=%s, mas=%s, concept_id=%s",
@@ -477,6 +482,7 @@ async def fetch_paths_by_ids(
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     request_body: GraphPathsRequest = Body(...),
+    _: None = Depends(check_workspace_and_mas),
 ) -> GraphPathsResponse:
     logger.info(
         "Querying path | workspace=%s, mas=%s, source_id=%s, target_id=%s",

@@ -26,10 +26,20 @@ from src.app.utils.mgmt_plane_client import fetch_all_cfn_nodes
 from src.app.utils.utils import get_app_version
 from src.logger.logger import setup_logging
 
-from src.app.config.config import (MGMT_URL, APP_PORT, WARMUP_TIMEOUT_SECONDS,
-                                   CFN_NAME, DB_NAME, DB_USER, DB_HOST,
-                                   DB_PASSWORD, DB_PORT, LOG_LEVEL,
-                                   SERVICE_NAME, validate_db_config, )
+from src.app.config.config import (
+    MGMT_URL,
+    APP_PORT,
+    WARMUP_TIMEOUT_SECONDS,
+    CFN_NAME,
+    DB_NAME,
+    DB_USER,
+    DB_HOST,
+    DB_PASSWORD,
+    DB_PORT,
+    LOG_LEVEL,
+    SERVICE_NAME,
+    validate_db_config,
+)
 
 from knowledge_memory.bootstrap.database import DatabaseManager
 from knowledge_memory.bootstrap.provider import register_provider
@@ -196,7 +206,7 @@ def create_app(*, lifespan=None) -> FastAPI:
         title=f"{SERVICE_NAME} API",
         version=get_app_version(),
         description="IoC Cognition Fabrics Node Service API",
-        docs_url="/docs",
+        docs_url="/api/docs", # along API docs path with mgmt-plane-service
         openapi_url="/openapi.json",
         lifespan=lifespan or app_lifespan,
     )

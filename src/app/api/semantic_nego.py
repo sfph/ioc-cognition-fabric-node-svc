@@ -1,13 +1,14 @@
 import logging
 from typing import List, Optional, Dict, Any, Literal
 
-from fastapi import APIRouter, Body, HTTPException, Path, status
+from fastapi import APIRouter, Body, HTTPException, Path, status, Depends
 from pydantic import BaseModel
 from semantic_negotiation.app.agent.semantic_negotiation import (
     SemanticNegotiationInputError,
     SemanticNegotiationPipeline,
 )
 
+from src.app.utils.mgmt_plane_client import check_workspace_and_mas
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -92,6 +93,7 @@ def start_negotiation(
     req: InitiateNegotiationRequest = Body(...),
     workspace_id: str = Path(..., description="Workspace ID"),
     mas_id: str = Path(..., description="Multi-Agentic System ID"),
+    _: None = Depends(check_workspace_and_mas),
 ):
     """Start a semantic negotiation session.
 
@@ -137,6 +139,7 @@ def decide_negotiation(
     req: DecideRequest = Body(...),
     workspace_id: str = Path(..., description="Workspace ID"),
     mas_id: str = Path(..., description="Multi-Agentic System ID"),
+    _: None = Depends(check_workspace_and_mas),
 ):
     """Advance a semantic negotiation session.
 
