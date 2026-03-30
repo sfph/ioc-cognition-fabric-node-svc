@@ -18,9 +18,9 @@ done
 
 echo "Checking for formatting issues with Black..."
 if [ "$CHECK_ONLY" = true ]; then
-  poetry run black --check src/
+  poetry run black --check src/ --target-version py311
 else
-  poetry run black src/
+  poetry run black src/ --target-version py311
 fi
 
 echo ""
