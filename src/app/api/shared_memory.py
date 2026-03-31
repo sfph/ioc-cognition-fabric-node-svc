@@ -30,6 +30,9 @@ from knowledge_memory import query_knowledge_graph_async, upsert_knowledge_graph
 from ingestion.app.agent.service import ConceptRelationshipExtractionService
 
 from fastapi import Request
+from semantic_negotiation.app.agent.semantic_negotiation import (
+    SemanticNegotiationInputError,
+)
 
 from src.app.api.schemas import (
     CreateOrUpdateRequest,
@@ -238,14 +241,27 @@ async def create_or_update_shared_memories(
         azure_deployment=AZURE_OPENAI_DEPLOYMENT,
     )
 
-    result = concept_service.extract_concepts_and_relationships(
-        extraction_payload.data,
-        request_id=request_id,
-        format_descriptor=extraction_payload.metadata.format,
-    )
     processor = KnowledgeProcessor(enable_embeddings=True, enable_dedup=False)
-    result = processor.process(result)
-    vector_store = ConceptVectorStore(cache_layer=cache_layer)  # Uses shared cache
+    try:
+        result = concept_service.extract_concepts_and_relationships(
+            extraction_payload.data,
+            request_id=request_id,
+            format_descriptor=extraction_payload.metadata.format,
+        )
+        result = processor.process(result)
+    except Exception as exc:
+        logger.exception(
+            "Failed to extract concepts and relations | workspace=%s mas=%s",
+            workspace_id,
+            mas_id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"failed to create or update shared memories, error: {exc}",
+        )
+
+    vector_store = ConceptVectorStore(cache_layer=cache_layer)
     vector_store.store_concepts(result.get("concepts", []))
 
     # -------------------------
@@ -325,9 +341,21 @@ async def fetch_shared_memories(
         mas_id=mas_id,
     )
 
-    eg_response = await process_evidence(
-        request, repo_adapter=repo, cache_layer=cache_layer
-    )
+    try:
+        eg_response = await process_evidence(
+            request, repo_adapter=repo, cache_layer=cache_layer
+        )
+    except Exception as exc:
+        logger.exception(
+            "Failed to process evidence | workspace=%s mas=%s",
+            workspace_id,
+            mas_id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"failed to process evidence: {exc}",
+        )
 
     logger.debug(f"Evidence gathering response: {eg_response}")
 
@@ -390,7 +418,10 @@ async def get_neighbors_by_id(
         )
     except Exception as exc:
         logger.exception(
-            f"Knowledge graph query failed | concept ID={concept_id}: {exc}",
+            "Failed to fetch neighbors by id from knowledge graph | workspace=%s mas=%s concept_id=%s",
+            workspace_id,
+            mas_id,
+            concept_id,
         )
 
         raise HTTPException(
@@ -424,7 +455,7 @@ async def fetch_concepts_by_ids(
     _: None = Depends(check_workspace_and_mas),
 ):
     logger.info(
-        "Querying concepts | workspace=%s, mas=%s, concept_id=%s",
+        "Querying concepts | workspace=%s, mas=%s, concept_ids=%s",
         workspace_id,
         mas_id,
         request_body.ids,
@@ -463,8 +494,12 @@ async def fetch_concepts_by_ids(
 
     except Exception as exc:
         logger.exception(
-            f"Knowledge graph query failed | concept IDs={request_body.ids}: {exc}",
+            "Failed to fetch concepts by ids from knowledge graph | workspace=%s mas=%s concept_ids=%s",
+            workspace_id,
+            mas_id,
+            request_body.ids,
         )
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"failed to fetch concepts by IDs: {exc}",
@@ -654,7 +689,14 @@ async def fetch_paths_by_ids(
         return GraphPathsResponse(status="success", paths=paths)
 
     except Exception as exc:
-        logger.exception("Knowledge graph query failed: %s", exc)
+        logger.exception(
+            "Failed to fetch paths by ids from knowledge graph | workspace=%s mas=%s source_id=%s target_id=%s",
+            workspace_id,
+            mas_id,
+            request_body.source_id,
+            request_body.target_id,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"failed to fetch paths: {exc}",
