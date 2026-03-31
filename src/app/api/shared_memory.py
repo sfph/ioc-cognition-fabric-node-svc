@@ -251,7 +251,7 @@ async def create_or_update_shared_memories(
         result = processor.process(result)
     except Exception as exc:
         logger.exception(
-            "Failed to extract concepts and relations | workspace=%s mas=%s",
+            "Failed to extract concepts and relations or process result | workspace=%s mas=%s",
             workspace_id,
             mas_id,
         )
