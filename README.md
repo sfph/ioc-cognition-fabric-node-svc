@@ -87,7 +87,7 @@ docker run \
   ioc-cfn:test
 ```
 
-After running the server, API docs may be accessed at http://localhost:9002/docs. Corresponding openapi.json can be found in [docs/openapi.json](./docs/openapi.json).
+After running the server, API docs may be accessed at http://localhost:9002/api/docs. Corresponding openapi.json can be found in [docs/openapi.json](./docs/openapi.json).
 
 ## Running the tests
 
