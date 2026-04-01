@@ -166,7 +166,7 @@ async def upsert_shared_memories_to_db_and_cache(
 
         logger.info(f"create or update shared memories to DB succeeded: {kg_resp}")
 
-        # only write to cache to ensure data consistency between DB and cache
+        # write to cache only after successfully writing to DB to ensure data consistency between DB and cache
         vector_store.store_concepts(result.get("concepts", []))
         vector_store.store_rag_chunks(result.get("rag_chunks", []))
 
