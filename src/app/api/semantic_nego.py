@@ -178,7 +178,7 @@ def decide_negotiation(
                 for reply in req.agent_replies
             ],
         )
-        # check final result
+        # TODO: persist final agreement to DB (and cache?)
 
         return result
     except SemanticNegotiationInputError as e:
