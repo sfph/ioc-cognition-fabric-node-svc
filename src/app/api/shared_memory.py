@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import json
-import os
 
 from caching.app.agent import CachingLayer
 from caching.app.agent.caching_layer_manager import CachingLayerManager
@@ -26,14 +25,11 @@ from typing import List, Optional, Dict, Any, Set
 from ingestion.app.agent import KnowledgeProcessor
 from ingestion.app.agent.concept_vector_store import VectorStore
 from ingestion.app.agent.ingest_data import IngestDataService
-from knowledge_memory import query_knowledge_graph_async, upsert_knowledge_graph_async
+from knowledge_memory import query_knowledge_graph_async
 
 from ingestion.app.agent.service import ConceptRelationshipExtractionService
 
 from fastapi import Request
-from semantic_negotiation.app.agent.semantic_negotiation import (
-    SemanticNegotiationInputError,
-)
 
 from src.app.api.schemas import (
     CreateOrUpdateRequest,
@@ -49,6 +45,7 @@ from src.app.config.config import (
     APP_PORT,
 )
 from src.app.utils.mgmt_plane_client import check_workspace_and_mas
+from src.app.utils.utils import upsert_shared_memories_to_db_and_cache
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -58,9 +55,11 @@ def get_vector_cache_manager(request: Request) -> CachingLayerManager:
     """Get the global vector cache manager."""
     return request.app.state.vector_cache_manager
 
+
 def get_rag_cache_manager(request: Request) -> CachingLayerManager:
     """Get the global RAG cache manager."""
     return request.app.state.rag_cache_manager
+
 
 def get_embed_fn(request: Request):
     """Get the embedding function."""
@@ -99,6 +98,7 @@ def get_vector_cache_layer_for_mas(
         logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
     return cache
 
+
 def get_rag_cache_layer_for_mas(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     manager: CachingLayerManager = Depends(get_rag_cache_manager),
@@ -131,6 +131,7 @@ def get_rag_cache_layer_for_mas(
         logger.info(f"Cache hit: Using existing RAG cache for mas_id={mas_id}")
     return cache
 
+
 def get_cache_layer_for_query(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
     manager: CachingLayerManager = Depends(get_vector_cache_manager),
@@ -159,85 +160,6 @@ def get_cache_layer_for_query(
         )
     logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
     return cache
-
-
-def json_escape_string(value: str) -> str:
-    return json.dumps(value)[1:-1]
-
-
-def transform_concept_attributes(attrs: Dict[str, Any]) -> Dict[str, Any]:
-    out: Dict[str, Any] = {}
-
-    # Required / known field
-    out["concept_type"] = attrs.get("conceptType")
-
-    # Extra attributes
-    for k, v in attrs.get("extra", {}).items():
-        out[k] = v
-
-    return out
-
-
-def transform_concept_embedding(attrs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    embedding = attrs.get("embedding")
-
-    if not embedding or not embedding[0]:
-        return None
-
-    return {
-        "name": "ibm-granite/granite-embedding-30m-english",  # TODO: make dynamic
-        "data": embedding[0],
-    }
-
-
-def transform_extraction_concepts(
-    src: List[Dict[str, Any]],
-) -> Optional[List[Dict[str, Any]]]:
-    if not src:
-        return None
-
-    out: List[Dict[str, Any]] = []
-
-    for c in src:
-        description = c.get("description", "")
-        desc_value = None
-
-        # Preserve empty string vs nil semantics
-        if description:
-            desc_value = json_escape_string(description)
-
-        out.append(
-            {
-                "id": c.get("id"),
-                "name": c.get("name"),
-                "description": desc_value,
-                "attributes": transform_concept_attributes(c.get("attributes", {})),
-                "embeddings": transform_concept_embedding(c.get("attributes", {})),
-            }
-        )
-
-    return out
-
-
-def transform_extraction_relations(
-    src: List[Dict[str, Any]],
-) -> Optional[List[Dict[str, Any]]]:
-    if not src:
-        return None
-
-    out: List[Dict[str, Any]] = []
-
-    for r in src:
-        out.append(
-            {
-                "id": r.get("id"),
-                "relation": r.get("relationship"),
-                "node_ids": r.get("node_ids"),
-                "attributes": r.get("attributes"),
-            }
-        )
-
-    return out
 
 
 @router.post(
@@ -280,15 +202,15 @@ async def create_or_update_shared_memories(
     processor = KnowledgeProcessor(enable_embeddings=True, enable_dedup=False)
     try:
         ingest_service = IngestDataService(concept_service=concept_service)
-        result = ingest_service.ingest(
+        ingestion_result = ingest_service.ingest(
             records=extraction_payload.data,
             request_id=request_id,
-            format_descriptor=extraction_payload.metadata.format
+            format_descriptor=extraction_payload.metadata.format,
         )
-        result = processor.process(result)
+        processed_result = processor.process(ingestion_result)
     except Exception as exc:
         logger.exception(
-            "Failed to extract concepts and relations or process result | workspace=%s mas=%s",
+            "Failed to ingest data via Cognition Engine | workspace=%s mas=%s",
             workspace_id,
             mas_id,
         )
@@ -299,43 +221,12 @@ async def create_or_update_shared_memories(
         )
 
     vector_store = VectorStore(
-        cache_layer=vector_cache_layer,
-        rag_cache_layer=rag_cache_layer
+        cache_layer=vector_cache_layer, rag_cache_layer=rag_cache_layer
     )
 
-
-    # -------------------------
-    # Upsert knowledge graph
-    # -------------------------
-    try:
-        concepts = transform_extraction_concepts(result.get("concepts", []))
-        relations = transform_extraction_relations(result.get("relations", []))
-
-        logger.debug(f"Concepts from extraction: {concepts}")
-        logger.debug(f"Relations from extraction: {relations}")
-
-        kg_resp = await upsert_knowledge_graph_async(
-            mas_id=mas_id,
-            wksp_id=workspace_id,
-            request_id=request_id,
-            concepts=concepts,
-            relations=relations,
-            force_replace=True,
-        )
-
-        # ensure data consistency between DB and cache
-        vector_store.store_concepts(result.get("concepts", []))
-        vector_store.store_rag_chunks(result.get("rag_chunks", []))
-    except Exception as exc:
-        logger.exception(
-            "UpsertKnowledgeGraph failed | workspace=%s mas=%s",
-            workspace_id,
-            mas_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"failed to create or update shared memories, error: {exc}",
-        )
+    kg_resp = await upsert_shared_memories_to_db_and_cache(
+        mas_id, workspace_id, request_id, processed_result, vector_store
+    )
 
     logger.info(f"create or update shared memories succeeded: {kg_resp}")
 
