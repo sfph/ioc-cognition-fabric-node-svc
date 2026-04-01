@@ -24,7 +24,8 @@ from fastapi import Path as ApiPath
 from typing import List, Optional, Dict, Any, Set
 
 from ingestion.app.agent import KnowledgeProcessor
-from ingestion.app.agent.concept_vector_store import ConceptVectorStore
+from ingestion.app.agent.concept_vector_store import VectorStore
+from ingestion.app.agent.ingest_data import IngestDataService
 from knowledge_memory import query_knowledge_graph_async, upsert_knowledge_graph_async
 
 from ingestion.app.agent.service import ConceptRelationshipExtractionService
@@ -53,19 +54,22 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def get_cache_manager(request: Request) -> CachingLayerManager:
-    """Get the global cache manager."""
-    return request.app.state.cache_manager
+def get_vector_cache_manager(request: Request) -> CachingLayerManager:
+    """Get the global vector cache manager."""
+    return request.app.state.vector_cache_manager
 
+def get_rag_cache_manager(request: Request) -> CachingLayerManager:
+    """Get the global RAG cache manager."""
+    return request.app.state.rag_cache_manager
 
 def get_embed_fn(request: Request):
     """Get the embedding function."""
     return request.app.state.embed_fn
 
 
-def get_cache_layer_for_mas(
+def get_vector_cache_layer_for_mas(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
-    manager: CachingLayerManager = Depends(get_cache_manager),
+    manager: CachingLayerManager = Depends(get_vector_cache_manager),
     embed_fn=Depends(get_embed_fn),
 ) -> CachingLayer:
     """Get or create an isolated cache layer for the given mas_id.
@@ -84,10 +88,10 @@ def get_cache_layer_for_mas(
     """
     cache = manager.get_cache(mas_id)
     if cache is None:
-        logger.info(f"Cache miss: Creating new cache layer for mas_id={mas_id}")
+        logger.info(f"Cache miss: Creating new vector cache layer for mas_id={mas_id}")
         cache = manager.create_cache(
             cache_id=mas_id,
-            vector_dimension=384,  # bge-small-en-v1.5 dimension
+            vector_dimension=384,  # granite-embedding-30m-english dimension
             metric="l2",
             embed_fn=embed_fn,  # Required for text-based similarity search
         )
@@ -95,10 +99,41 @@ def get_cache_layer_for_mas(
         logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
     return cache
 
+def get_rag_cache_layer_for_mas(
+    mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
+    manager: CachingLayerManager = Depends(get_rag_cache_manager),
+    embed_fn=Depends(get_embed_fn),
+) -> CachingLayer:
+    """Get or create an isolated cache layer for the given mas_id.
+
+    This dependency automatically extracts mas_id from the path and
+    retrieves/creates the appropriate cache layer.
+
+    Args:
+        mas_id: Multi-Agentic System ID for isolation
+        manager: The CachingLayerManager instance
+        embed_fn: Embedding function for the cache layer (required for text-based
+                  similarity queries)
+
+    Returns:
+        CachingLayer instance isolated to this mas_id
+    """
+    cache = manager.get_cache(mas_id)
+    if cache is None:
+        logger.info(f"Cache miss: Creating new RAG cache layer for mas_id={mas_id}")
+        cache = manager.create_cache(
+            cache_id=mas_id,
+            vector_dimension=384,  # granite-embedding-30m-english dimension
+            metric="l2",
+            embed_fn=embed_fn,  # Required for text-based similarity search
+        )
+    else:
+        logger.info(f"Cache hit: Using existing RAG cache for mas_id={mas_id}")
+    return cache
 
 def get_cache_layer_for_query(
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
-    manager: CachingLayerManager = Depends(get_cache_manager),
+    manager: CachingLayerManager = Depends(get_vector_cache_manager),
 ) -> CachingLayer:
     """Get cache layer for query operations (read-only).
 
@@ -150,7 +185,7 @@ def transform_concept_embedding(attrs: Dict[str, Any]) -> Optional[Dict[str, Any
         return None
 
     return {
-        "name": "BAAI/bge-small-en-v1.5",  # TODO: make dynamic
+        "name": "ibm-granite/granite-embedding-30m-english",  # TODO: make dynamic
         "data": embedding[0],
     }
 
@@ -216,7 +251,8 @@ async def create_or_update_shared_memories(
     body: CreateOrUpdateRequest = Body(...),
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
-    cache_layer: CachingLayer = Depends(get_cache_layer_for_mas),
+    vector_cache_layer: CachingLayer = Depends(get_vector_cache_layer_for_mas),
+    rag_cache_layer: CachingLayer = Depends(get_rag_cache_layer_for_mas),
     _: None = Depends(check_workspace_and_mas),
 ):
 
@@ -243,10 +279,11 @@ async def create_or_update_shared_memories(
 
     processor = KnowledgeProcessor(enable_embeddings=True, enable_dedup=False)
     try:
-        result = concept_service.extract_concepts_and_relationships(
-            extraction_payload.data,
+        ingest_service = IngestDataService(concept_service=concept_service)
+        result = ingest_service.ingest(
+            records=extraction_payload.data,
             request_id=request_id,
-            format_descriptor=extraction_payload.metadata.format,
+            format_descriptor=extraction_payload.metadata.format
         )
         result = processor.process(result)
     except Exception as exc:
@@ -261,8 +298,11 @@ async def create_or_update_shared_memories(
             detail=f"failed to create or update shared memories, error: {exc}",
         )
 
-    vector_store = ConceptVectorStore(cache_layer=cache_layer)
-    vector_store.store_concepts(result.get("concepts", []))
+    vector_store = VectorStore(
+        cache_layer=vector_cache_layer,
+        rag_cache_layer=rag_cache_layer
+    )
+
 
     # -------------------------
     # Upsert knowledge graph
@@ -282,6 +322,10 @@ async def create_or_update_shared_memories(
             relations=relations,
             force_replace=True,
         )
+
+        # ensure data consistency between DB and cache
+        vector_store.store_concepts(result.get("concepts", []))
+        vector_store.store_rag_chunks(result.get("rag_chunks", []))
     except Exception as exc:
         logger.exception(
             "UpsertKnowledgeGraph failed | workspace=%s mas=%s",
@@ -312,7 +356,8 @@ async def fetch_shared_memories(
     body: QueryRequest = Body(...),
     workspace_id: str = ApiPath(..., description="Workspace ID"),
     mas_id: str = ApiPath(..., description="Multi-Agentic System ID"),
-    cache_layer: CachingLayer = Depends(get_cache_layer_for_query),
+    vector_cache_layer: CachingLayer = Depends(get_vector_cache_layer_for_mas),
+    rag_cache_layer: CachingLayer = Depends(get_rag_cache_layer_for_mas),
     _: None = Depends(check_workspace_and_mas),
 ):
     # Avoid importing heavy runtime dependencies at module load time
@@ -343,7 +388,10 @@ async def fetch_shared_memories(
 
     try:
         eg_response = await process_evidence(
-            request, repo_adapter=repo, cache_layer=cache_layer
+            request,
+            repo_adapter=repo,
+            cache_layer=vector_cache_layer,
+            rag_cache_layer=rag_cache_layer,
         )
     except Exception as exc:
         logger.exception(

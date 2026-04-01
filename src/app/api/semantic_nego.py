@@ -178,6 +178,8 @@ def decide_negotiation(
                 for reply in req.agent_replies
             ],
         )
+        # check final result
+
         return result
     except SemanticNegotiationInputError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -9,7 +9,7 @@ import logging
 from typing import Any, Callable, Dict, List
 
 from caching.app.agent.caching_layer_manager import CachingLayerManager
-from ingestion.app.agent.concept_vector_store import ConceptVectorStore
+from ingestion.app.agent.concept_vector_store import VectorStore
 from knowledge_memory.server.database.graph_db.agensgraph.src.db import GraphDB
 from knowledge_memory.server.schemas.knowledge_graph import Concept, EmbeddingConfig
 
@@ -265,7 +265,7 @@ async def populate_faiss_cache_for_mas(
         )
 
         # Store concepts in FAISS
-        vector_store = ConceptVectorStore(cache_layer=layer)
+        vector_store = VectorStore(cache_layer=layer)
         vector_store.store_concepts(concept_dicts)
 
         cache_stats = layer.describe()
