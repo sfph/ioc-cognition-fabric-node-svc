@@ -1,14 +1,39 @@
 import logging
 from typing import List, Optional, Dict, Any, Literal
 
-from fastapi import APIRouter, Body, HTTPException, Path, status, Depends
+from caching.app.agent import CachingLayer
+from fastapi import (
+    APIRouter,
+    Body,
+    HTTPException,
+    Path,
+    status,
+    Depends,
+    BackgroundTasks,
+)
+from ingestion.app.agent import KnowledgeProcessor
+from ingestion.app.agent.concept_vector_store import VectorStore
+from ingestion.app.agent.ingest_data import IngestDataService
+from ingestion.app.agent.service import ConceptRelationshipExtractionService
 from pydantic import BaseModel
+from requests import session
 from semantic_negotiation.app.agent.semantic_negotiation import (
     SemanticNegotiationInputError,
     SemanticNegotiationPipeline,
 )
 
+from src.app.api.shared_memory import (
+    get_vector_cache_layer_for_mas,
+    get_rag_cache_layer_for_mas,
+)
+from src.app.config.config import (
+    AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_API_KEY,
+    AZURE_OPENAI_API_VERSION,
+    AZURE_OPENAI_DEPLOYMENT,
+)
 from src.app.utils.mgmt_plane_client import check_workspace_and_mas
+from src.app.utils.utils import upsert_shared_memories_to_db_and_cache
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -89,7 +114,7 @@ pipeline = SemanticNegotiationPipeline(n_steps=20)
     response_model_exclude_none=True,
     tags=["semantic-negotiation"],
 )
-def start_negotiation(
+async def start_negotiation(
     req: InitiateNegotiationRequest = Body(...),
     workspace_id: str = Path(..., description="Workspace ID"),
     mas_id: str = Path(..., description="Multi-Agentic System ID"),
@@ -135,11 +160,14 @@ def start_negotiation(
     response_model_exclude_none=True,
     tags=["semantic-negotiation"],
 )
-def decide_negotiation(
+async def decide_negotiation(
     req: DecideRequest = Body(...),
     workspace_id: str = Path(..., description="Workspace ID"),
     mas_id: str = Path(..., description="Multi-Agentic System ID"),
     _: None = Depends(check_workspace_and_mas),
+    vector_cache_layer: CachingLayer = Depends(get_vector_cache_layer_for_mas),
+    rag_cache_layer: CachingLayer = Depends(get_rag_cache_layer_for_mas),
+    background_tasks: BackgroundTasks = None,
 ):
     """Advance a semantic negotiation session.
 
@@ -178,9 +206,97 @@ def decide_negotiation(
                 for reply in req.agent_replies
             ],
         )
-        return result
+
     except SemanticNegotiationInputError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         logger.exception("Unhandled error in semantic negotiation execute()")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    def to_dict(obj):
+        if isinstance(obj, dict):
+            return {k: to_dict(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [to_dict(v) for v in obj]
+        if hasattr(obj, "__dict__"):
+            return {k: to_dict(v) for k, v in vars(obj).items()}
+        return obj
+
+    converted_result = to_dict(result)
+
+    has_agreement = converted_result.get("status", "") == "agreed"
+
+    sstp_commit_message = converted_result.get("final_result", {})
+
+    # Only persist the data to DB and cache if agreement is reached
+    if has_agreement:
+        background_tasks.add_task(
+            persist_negotiation_agreement_background,
+            result=sstp_commit_message,
+            session_id=req.session_id,
+            workspace_id=workspace_id,
+            mas_id=mas_id,
+            vector_cache_layer=vector_cache_layer,
+            rag_cache_layer=rag_cache_layer,
+        )
+
+    return result
+
+
+async def persist_negotiation_agreement_background(
+    *,
+    result: dict,
+    session_id: str,
+    workspace_id: str,
+    mas_id: str,
+    vector_cache_layer: CachingLayer,
+    rag_cache_layer: CachingLayer,
+):
+    logger.info(f"persisting negotiation agreement to DB and cache: {result}")
+
+    try:
+        concept_service = ConceptRelationshipExtractionService(
+            azure_endpoint=AZURE_OPENAI_ENDPOINT,
+            azure_api_key=AZURE_OPENAI_API_KEY,
+            azure_api_version=AZURE_OPENAI_API_VERSION,
+            azure_deployment=AZURE_OPENAI_DEPLOYMENT,
+        )
+
+        processor = KnowledgeProcessor(
+            enable_embeddings=True,
+            enable_dedup=False,
+        )
+
+        ingest_service = IngestDataService(concept_service=concept_service)
+
+        ingested_result = ingest_service.ingest(
+            records=[result],
+            request_id=session_id,
+            format_descriptor="semneg",
+        )
+        processed_result = processor.process(ingested_result)
+
+        await upsert_shared_memories_to_db_and_cache(
+            result=processed_result,
+            mas_id=mas_id,
+            workspace_id=workspace_id,
+            request_id=session_id,
+            vector_store=VectorStore(
+                cache_layer=vector_cache_layer,
+                rag_cache_layer=rag_cache_layer,
+            ),
+        )
+
+        logger.info(
+            "Persisted negotiation agreement to shared memory | workspace=%s mas=%s session_id=%s",
+            workspace_id,
+            mas_id,
+            session_id,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to persist negotiation agreement | workspace=%s mas=%s session_id=%s",
+            workspace_id,
+            mas_id,
+            session_id,
+        )

@@ -1,0 +1,110 @@
+[
+    {
+      "version": "0",
+      "message_id": "6f3b8937-a4ac-4d1f-9b5f-cd1629490ea1",
+      "dt_created": "2026-03-24T19:24:27.902440+00:00",
+      "origin": {
+        "tenant_id": "sess-20260324_122105-cloud_platform",
+        "attestation": null
+      },
+      "semantic_context": {
+        "schema_id": "urn:ioc:schema:negotiate:commit:v1",
+        "schema_version": "1.0",
+        "encoding": "json",
+        "session_id": "sess-20260324_122105-cloud_platform",
+        "outcome": "agreement",
+        "error_message": null,
+        "content_text": "All parties need to agree on price and delivery speed for an urgent supply order.\n",
+        "agents_negotiating": [
+          "agent-a",
+          "agent-b",
+          "agent-c"
+        ],
+        "issues": [
+          "compute tier",
+          "storage quota",
+          "support level",
+          "deployment region",
+          "contract length"
+        ],
+        "options_per_issue": {
+          "compute tier": [
+            "basic",
+            "standard",
+            "premium",
+            "enterprise"
+          ],
+          "storage quota": [
+            "100 GB",
+            "500 GB",
+            "1 TB",
+            "5 TB"
+          ],
+          "support level": [
+            "self-service",
+            "standard support",
+            "priority support",
+            "dedicated support"
+          ],
+          "deployment region": [
+            "North America",
+            "Europe",
+            "Asia-Pacific",
+            "South America"
+          ],
+          "contract length": [
+            "1 year",
+            "2 years",
+            "3 years",
+            "5 years"
+          ]
+        },
+        "final_agreement": [
+          {
+            "issue_id": "compute tier",
+            "chosen_option": "basic"
+          },
+          {
+            "issue_id": "storage quota",
+            "chosen_option": "100 GB"
+          },
+          {
+            "issue_id": "support level",
+            "chosen_option": "self-service"
+          },
+          {
+            "issue_id": "deployment region",
+            "chosen_option": "North America"
+          },
+          {
+            "issue_id": "contract length",
+            "chosen_option": "1 year"
+          }
+        ]
+      },
+      "payload_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "policy_labels": {
+        "sensitivity": "internal",
+        "propagation": "restricted",
+        "retention_policy": "default"
+      },
+      "provenance": {
+        "sources": [],
+        "transforms": []
+      },
+      "state_object_id": "sess-20260324_122105-cloud_platform",
+      "parent_ids": [
+        "6f3b8937-a4ac-4d1f-9b5f-cd1629490ea1"
+      ],
+      "logical_clock": {
+        "type": "lamport",
+        "value": 39
+      },
+      "payload_refs": [],
+      "confidence_score": 1.0,
+      "ttl_seconds": 86400,
+      "merge_strategy": "add",
+      "risk_score": 0.0,
+      "kind": "commit"
+    }
+]

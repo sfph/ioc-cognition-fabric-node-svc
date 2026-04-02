@@ -105,17 +105,17 @@ async def cognition_engine_lifespan(app: FastAPI):
         return out
 
     # Create manager instead of single layer for mas_id-based isolation
-    cache_manager = CachingLayerManager()
+    vector_cache_manager = CachingLayerManager()
 
-    app.state.embedding_manager = embedding_manager
     # Cache Manager for Graph
-    app.state.cache_manager = cache_manager
-    app.state.embed_fn = embed_fn  # Store for layer creation
+    app.state.embedding_manager = embedding_manager
+    app.state.vector_cache_manager = vector_cache_manager
 
-    # TODO: These are for RAG usage and aren't currently used.
+    # Cache Manager for RAG
     rag_cache_manager = CachingLayerManager()
     app.state.rag_cache_manager = rag_cache_manager
 
+    app.state.embed_fn = embed_fn
     app.state.settings = Settings()
 
     # Warm FAISS caches for all MAS (blocking to ensure cache is ready)
@@ -144,7 +144,7 @@ async def cognition_engine_lifespan(app: FastAPI):
 
         cfn_id = matching_cfn.get("cfn_id")
         logger.debug(f"FAISS cache warmup: Found CFN '{CFN_NAME}' (id={cfn_id})")
-        await warm_all_faiss_caches(cfn_id, cache_manager, embed_fn)
+        await warm_all_faiss_caches(cfn_id, vector_cache_manager, embed_fn)
 
     try:
         logger.info(f"Starting cache warmup with {warmup_timeout}s timeout")

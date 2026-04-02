@@ -1,4 +1,4 @@
-from typing import Any, Optional, List, Dict
+from typing import Any, Optional, List, Dict, Literal
 from uuid import uuid4
 
 from evidence.app.api.schemas import KnowledgeRecord
@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field, model_validator, ConfigDict
 
 
 class ExtractionPayloadMetadata(BaseModel):
-    format: str = Field(
-        "openclaw",
+    format: Literal["observe-sdk-otel", "openclaw"] = Field(
+        default="openclaw",
         description="Payload format. Supported values: 'observe-sdk-otel' and 'openclaw'. Defaults to 'openclaw'.",
     )
 
