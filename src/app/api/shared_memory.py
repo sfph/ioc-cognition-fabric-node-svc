@@ -310,14 +310,14 @@ async def fetch_shared_memories(
     final_response = evidence.get("final_response")  # may be missing
 
     if evidence_status == "insufficient":
-        logger.error(f"Insufficient evidence to answer user intent, "
-                     f"eg_response: {eg_response}")
+        logger.error(
+            f"Insufficient evidence to answer user intent, "
+            f"eg_response: {eg_response}"
+        )
 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                f"Insufficient evidence to answer provided user intent"
-            ),
+            detail="Insufficient evidence to answer provided user intent",
         )
 
     if final_response:
