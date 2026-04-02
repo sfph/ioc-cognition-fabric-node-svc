@@ -12,8 +12,8 @@ dependencies = [
     "fastapi (>=0.104.1,<0.136.0)",
     "dotenv (>=0.9.9,<0.10.0)",
     "httpx>=0.27",
-    "knowledge-memory==0.1.9.dev20260323194736",
-    "cognition-engine==0.1.0.dev18"
+    "knowledge-memory==0.2.0.dev20260402185442",
+    "cognition-engine==0.1.0.rc0"
 ]
 
 [[tool.poetry.source]]
