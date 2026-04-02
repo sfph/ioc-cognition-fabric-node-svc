@@ -22,6 +22,7 @@ from semantic_negotiation.app.agent.semantic_negotiation import (
     SemanticNegotiationPipeline,
 )
 
+
 from src.app.api.shared_memory import (
     get_vector_cache_layer_for_mas,
     get_rag_cache_layer_for_mas,
@@ -31,7 +32,9 @@ from src.app.config.config import (
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_API_VERSION,
     AZURE_OPENAI_DEPLOYMENT,
+    APP_PORT
 )
+
 from src.app.utils.mgmt_plane_client import check_workspace_and_mas
 from src.app.utils.utils import upsert_shared_memories_to_db_and_cache
 
@@ -141,6 +144,10 @@ async def start_negotiation(
             content_text=req.content_text,
             agents_raw=[agent.model_dump() for agent in req.agents],
             n_steps=req.n_steps,
+            workspace_id=workspace_id,
+            mas_id=mas_id,
+            fabric_node_base_url=f"http://127.0.0.1:{APP_PORT}",
+            agent_names=[agent.name for agent in req.agents],
         )
         return result
     except SemanticNegotiationInputError as e:
@@ -205,6 +212,7 @@ async def decide_negotiation(
                 {**reply.model_dump(), "participant_id": reply.agent_id}
                 for reply in req.agent_replies
             ],
+
         )
 
     except SemanticNegotiationInputError as e:
