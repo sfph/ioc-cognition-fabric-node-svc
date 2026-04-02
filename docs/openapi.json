@@ -190,6 +190,10 @@
           "format": {
             "default": "openclaw",
             "description": "Payload format. Supported values: 'observe-sdk-otel' and 'openclaw'. Defaults to 'openclaw'.",
+            "enum": [
+              "observe-sdk-otel",
+              "openclaw"
+            ],
             "title": "Format",
             "type": "string"
           }
