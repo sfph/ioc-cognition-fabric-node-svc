@@ -308,18 +308,24 @@ async def fetch_shared_memories(
 
     evidence_status = evidence.get("status")  # e.g. "insufficient"
     final_response = evidence.get("final_response")  # may be missing
-    entity_name = (evidence.get("entity") or {}).get("name")
 
-    message = (
-        final_response
-        or (
-            f"Insufficient evidence for entity '{entity_name}'"
-            if evidence_status == "insufficient" and entity_name
-            else None
+    if evidence_status == "insufficient":
+        logger.error(f"Insufficient evidence to answer user intent, "
+                     f"eg_response: {eg_response}")
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                f"Insufficient evidence to answer provided user intent"
+            ),
         )
-        or (f"Evidence status: {evidence_status}" if evidence_status else None)
-        or "evidence processed"
-    )
+
+    if final_response:
+        message = final_response
+    elif evidence_status:
+        message = f"Evidence status: {evidence_status}"
+    else:
+        message = "evidence processed"
 
     return QueryResponse(
         response_id=request_id,
