@@ -8,6 +8,7 @@ from semantic_negotiation.app.agent.semantic_negotiation import (
     SemanticNegotiationPipeline,
 )
 
+from src.app.config.config import APP_PORT
 from src.app.utils.mgmt_plane_client import check_workspace_and_mas
 
 router = APIRouter()
@@ -116,6 +117,10 @@ def start_negotiation(
             content_text=req.content_text,
             agents_raw=[agent.model_dump() for agent in req.agents],
             n_steps=req.n_steps,
+            workspace_id=workspace_id,
+            mas_id=mas_id,
+            fabric_node_base_url=f"http://127.0.0.1:{APP_PORT}",
+            agent_names=[agent.name for agent in req.agents],
         )
         return result
     except SemanticNegotiationInputError as e:
@@ -177,6 +182,7 @@ def decide_negotiation(
                 {**reply.model_dump(), "participant_id": reply.agent_id}
                 for reply in req.agent_replies
             ],
+
         )
         return result
     except SemanticNegotiationInputError as e:
