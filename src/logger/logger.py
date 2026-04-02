@@ -91,6 +91,14 @@ class JsonFormatter(logging.Formatter):
             "service": self.service_name,
             "version": self.version,
         }
+
+        if record.exc_info:
+            # Use the base Formatter to render a standard Python traceback string
+            log_record["exception"] = self.formatException(record.exc_info)
+
+        if record.stack_info:
+            log_record["stack_info"] = self.formatStack(record.stack_info)
+
         return json.dumps(log_record)
 
 
