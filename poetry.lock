@@ -601,14 +601,14 @@ files = [
 
 [[package]]
 name = "cognition-engine"
-version = "0.1.0rc5"
+version = "0.1.0rc6"
 description = "IOC CFN Cognition Engine – unified knowledge extraction, evidence gathering and semantic negotiation."
 optional = false
 python-versions = ">=3.11,<4.0"
 groups = ["main"]
 files = [
-    {file = "cognition_engine-0.1.0rc5-py3-none-any.whl", hash = "sha256:34d8d9798ec56453e73eed9d5cd4dd394c18797ed187e3516a6a5fd79fc7f178"},
-    {file = "cognition_engine-0.1.0rc5.tar.gz", hash = "sha256:66e8e723dcb7b3bd4103d88ff5318a5211e312fe34ba1af42b48d44e479d7143"},
+    {file = "cognition_engine-0.1.0rc6-py3-none-any.whl", hash = "sha256:553c12712b2c46913bea800a2acbceaf174cab59a945f753a80790423f78c8da"},
+    {file = "cognition_engine-0.1.0rc6.tar.gz", hash = "sha256:e471bba34a47782a52bd51f23247e7eb2f06d52943441ef3fdf36b2f814d1670"},
 ]
 
 [package.dependencies]
@@ -6356,4 +6356,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "4abc6acc766bbceef54a1ad9411044feeadb53c3823f5638ec62ec57ca3034c6"
+content-hash = "7cc0402e2d898d2ab74c96c3812742d6dca39f3a80cd9cdd516778a6fa308079"
