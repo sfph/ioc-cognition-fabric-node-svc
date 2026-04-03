@@ -46,7 +46,7 @@ The service loads environment variables from an `env.conf` file located at the r
 
 Example `env.conf`:
 
-> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33)
+> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33) and `ioc-cfn-mgmt-backend-svc` is running and listening to http://localhost:9000.
 
 ```bash
 PORT=9002
@@ -63,7 +63,6 @@ DB_PORT=5456
 LLM_MODEL=azure/gpt-4o # replace with your LLM model
 LLM_API_KEY=<your-api-key> # replace with your LLM API key
 LLM_BASE_URL=https://<your-resource>.openai.azure.com/ # replace with your Azure OpenAI endpoint
-AZURE_API_VERSION=2025-01-01-preview # Azure OpenAI API version
 ```
 
 ## Running the Server
