@@ -28,10 +28,9 @@ from src.app.api.shared_memory import (
     get_rag_cache_layer_for_mas,
 )
 from src.app.config.config import (
-    AZURE_OPENAI_ENDPOINT,
-    AZURE_OPENAI_API_KEY,
-    AZURE_OPENAI_API_VERSION,
-    AZURE_OPENAI_DEPLOYMENT,
+    LLM_MODEL,
+    LLM_API_KEY,
+    LLM_BASE_URL,
     APP_PORT
 )
 
@@ -264,10 +263,9 @@ async def persist_negotiation_agreement_background(
 
     try:
         concept_service = ConceptRelationshipExtractionService(
-            azure_endpoint=AZURE_OPENAI_ENDPOINT,
-            azure_api_key=AZURE_OPENAI_API_KEY,
-            azure_api_version=AZURE_OPENAI_API_VERSION,
-            azure_deployment=AZURE_OPENAI_DEPLOYMENT,
+            llm_model=LLM_MODEL,
+            llm_api_key=LLM_API_KEY,
+            llm_base_url=LLM_BASE_URL,
         )
 
         processor = KnowledgeProcessor(

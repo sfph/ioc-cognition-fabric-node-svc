@@ -27,6 +27,19 @@ From the repository root:
 make install
 ```
 
+### Local Development: Download Embedding Models
+
+For local development, download the required embedding models by running:
+
+```bash
+./scripts/download_models.sh
+```
+
+This script will:
+- Download the granite-embedding-30m-english model from HuggingFace
+- Quantize the model for optimal performance
+- Automatically configure EMBEDDING_MODEL_PATH in env.conf
+
 ## Environment Configuration
 
 The service loads environment variables from an `env.conf` file located at the repository root.
@@ -47,10 +60,10 @@ DB_USER=postgresUser
 DB_PASSWORD=postgresPW
 DB_HOST=localhost
 DB_PORT=5456
-AZURE_OPENAI_ENDPOINT=<AZURE_OPENAI_ENDPOINT> # replace with your LLM credentials
-AZURE_OPENAI_API_KEY=<AZURE_OPENAI_API_KEY> # replace with your LLM credentials
-AZURE_OPENAI_DEPLOYMENT=<AZURE_OPENAI_DEPLOYMENT> # replace with your LLM credentials
-AZURE_OPENAI_API_VERSION=<AZURE_OPENAI_API_VERSION> # replace with your LLM credentials
+LLM_MODEL=azure/gpt-4o # replace with your LLM model
+LLM_API_KEY=<your-api-key> # replace with your LLM API key
+LLM_BASE_URL=https://<your-resource>.openai.azure.com/ # replace with your Azure OpenAI endpoint
+AZURE_API_VERSION=2025-01-01-preview # Azure OpenAI API version
 ```
 
 ## Running the Server
