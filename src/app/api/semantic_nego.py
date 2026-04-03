@@ -139,7 +139,7 @@ async def start_negotiation(
         other APIs, but ``session_id`` is assumed globally unique (not scoped by workspace/mas).
     """
     try:
-        result = pipeline.execute(
+        result = await pipeline.async_execute(
             session_id=req.session_id,
             content_text=req.content_text,
             agents_raw=[agent.model_dump() for agent in req.agents],
@@ -206,7 +206,7 @@ async def decide_negotiation(
         )
 
     try:
-        result = pipeline.execute(
+        result = await pipeline.async_execute(
             session_id=req.session_id,
             agent_replies=[
                 {**reply.model_dump(), "participant_id": reply.agent_id}
