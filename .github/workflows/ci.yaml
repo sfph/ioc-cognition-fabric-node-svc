@@ -38,8 +38,7 @@ jobs:
   ###############################################################################
   checkout-unit-tests-build-docs:
     name: checkout & unit test & build docs
-    runs-on:
-      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+    runs-on: ubuntu-latest
     container:
       image: python:3.11-slim
       options: --user root
@@ -115,8 +114,7 @@ jobs:
   docker-build-push:
     name: Docker Build & Push
     needs: [checkout-unit-tests-build-docs]
-    runs-on:
-      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -175,8 +173,7 @@ jobs:
         docker-build-push,
       ]
     if: always()
-    runs-on:
-      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+    runs-on: ubuntu-latest
     steps:
       - name: report failure
         if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
