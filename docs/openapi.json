@@ -416,7 +416,7 @@
   "info": {
     "description": "IoC Cognition Fabrics Node Service API",
     "title": "ioc-cfn-svc API",
-    "version": "0.0.1"
+    "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
