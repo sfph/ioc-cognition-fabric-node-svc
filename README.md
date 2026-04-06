@@ -9,7 +9,7 @@ IoC Cognition Fabric Node Service in Python.
 - Python **3.11+**
 - [Poetry](https://python-poetry.org/docs/#installation)
 - Docker (optional)
-- [IOC Management Plane Service](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc) is running and reachable
+- [IOC Management Plane Service](https://github.com/outshift-open/ioc-cfn-mgmt-backend-svc) is running and reachable
 
 Verify Poetry is installed:
 
@@ -44,7 +44,7 @@ The service loads environment variables from an `env.conf` file located at the r
 
 Example `env.conf`:
 
-> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33) and `ioc-cfn-mgmt-backend-svc` is running and listening to http://localhost:9000.
+> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/outshift-open/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33) and `ioc-cfn-mgmt-backend-svc` is running and listening to http://localhost:9000.
 
 ```bash
 PORT=9002
