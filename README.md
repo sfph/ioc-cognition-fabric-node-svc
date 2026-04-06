@@ -19,8 +19,6 @@ poetry --version
 
 ##  Install Dependencies
 
-**First-time setup:** This project uses internal packages from Cisco Artifactory. See [ARTIFACTORY_INSTALLATION_GUIDE.md](ARTIFACTORY_INSTALLATION_GUIDE.md) for credential setup.
-
 From the repository root:
 
 ```bash
