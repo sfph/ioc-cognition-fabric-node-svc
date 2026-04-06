@@ -307,7 +307,7 @@ async def fetch_shared_memories(
     evidence_status = evidence.get("status")  # e.g. "insufficient"
     final_response = evidence.get("final_response")  # may be missing
 
-    if evidence_status == "insufficient":
+    if final_response == "The evidence does not support an answer to this question.":
         logger.error(
             f"Insufficient evidence to answer user intent, "
             f"eg_response: {eg_response}"
