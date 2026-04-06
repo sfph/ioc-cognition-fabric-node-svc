@@ -1,12 +1,13 @@
 [project]
 name = "ioc-cognition-fabric-node-svc"
-version = "0.1.0"
+version = "0.1.1"
 description = "IOC CFN"
 authors = [
     {name = "Darren Lau",email = "darrelau@cisco.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.11,<4.0"
+# Upper bound matches cognition-engine (faiss-cpu has no usable wheels on 3.14 for macOS/Linux).
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "uvicorn (>=0.24.0,<0.42.0)",
     "fastapi (>=0.104.1,<0.136.0)",
