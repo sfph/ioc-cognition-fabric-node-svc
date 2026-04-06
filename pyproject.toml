@@ -22,10 +22,6 @@ name = "outshift-pypi"
 url = "https://artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/outshift-pypi/simple"
 priority = "supplemental"
 
-
-[tool.poetry.dependencies]
-knowledge-memory = {develop = true}
-cognition-engine = {develop = true}
 [tool.poetry]
 package-mode = false
 
