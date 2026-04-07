@@ -72,16 +72,10 @@ make run
 
 ### With Docker
 
-Build with Artifactory credentials:
-
 ```bash
 docker build \
-  --build-arg ARTIFACTORY_USER=YOUR_USERNAME \
-  --build-arg ARTIFACTORY_TOKEN=YOUR_TOKEN \
   -t ioc-cfn:test .
 ```
-
-See [ARTIFACTORY_INSTALLATION_GUIDE.md](ARTIFACTORY_INSTALLATION_GUIDE.md) for setup details.
 
 If IOC Management Plane service is running on Docker, update the env var:
 ```bash
