@@ -33,18 +33,12 @@ ENV PATH="/opt/venv/bin:/root/.local/bin:$PATH"
 
 COPY pyproject.toml poetry.lock* ./
 
-# Artifactory credentials passed as build args
-ARG ARTIFACTORY_USER
-ARG ARTIFACTORY_TOKEN
-
 # Install dependencies (no dev deps)
-RUN poetry config http-basic.outshift-pypi "$ARTIFACTORY_USER" "$ARTIFACTORY_TOKEN" && \
-  poetry export \
+RUN poetry export \
   --without dev \
   --without-hashes \
   --format requirements.txt \
   -o /tmp/requirements.txt && \
-  PIP_EXTRA_INDEX_URL="https://${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}@artifactory.devhub-cloud.cisco.com/artifactory/api/pypi/outshift-pypi/simple" \
   /opt/venv/bin/pip install --no-input -r /tmp/requirements.txt
 
 
