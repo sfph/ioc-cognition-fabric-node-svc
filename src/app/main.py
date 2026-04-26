@@ -191,7 +191,13 @@ async def app_lifespan(app: FastAPI):
         provider_config=provider_config,
     ):
         async with cognition_engine_lifespan(app):
-            yield
+            # Continuous loop-lag sampler with stack snapshots on wedge.
+            from src.app.api._loop_lag import start_sampler, stop_sampler
+            start_sampler()
+            try:
+                yield
+            finally:
+                await stop_sampler()
 
     stop_event.set()
 
@@ -220,6 +226,56 @@ def create_app(*, lifespan=None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Per-request timing middleware.
+    # Installs a fresh per-request timing dict that the dep factories and
+    # the /decide route handler cooperate on.  Middleware-level so it
+    # captures FastAPI ``Depends`` resolution time (which happens before
+    # the route body runs and was previously invisible to handler-local
+    # timing).
+    import time as _time
+    from src.app.api._request_timing import timing_reset, timing_stamp
+    from src.app.api._loop_lag import loop_lag_window_start, loop_lag_window_stop
+
+    @app.middleware("http")
+    async def _stamp_request_start(request, call_next):
+        bucket = timing_reset()
+        timing_stamp("request_started_perf", _time.perf_counter())
+        # Open per-request lag-sampling window.  The continuous background
+        # sampler is always running; this just marks "what slice of its
+        # samples belong to this request" so we can stamp summary stats
+        # into the _timing envelope.
+        loop_lag_window_start()
+        # Compute wire-to-middleware delta from a client-supplied wall-clock
+        # send time. If the gap between the client's POST and our middleware
+        # firing is large, the request was either sitting on the wire or —
+        # more likely — in uvicorn's accept queue waiting for the event
+        # loop to free up.
+        sent_ns_hdr = request.headers.get("x-client-sent-wall-ns")
+        if sent_ns_hdr:
+            try:
+                sent_ns = int(sent_ns_hdr)
+                wire_ms = (_time.time_ns() - sent_ns) / 1_000_000.0
+                # Negative deltas from clock skew → clamp at 0 to avoid noise.
+                timing_stamp("wire_to_middleware_ms", round(max(0.0, wire_ms), 2))
+            except (ValueError, TypeError):
+                pass  # never let a bad header break the request
+        response = await call_next(request)
+        # We can't mutate a streaming response body here; the handler
+        # itself merges the bucket into ``_timing`` before returning.
+        # Stamp the end so debug logs / future middleware can read it.
+        bucket["request_finished_perf"] = _time.perf_counter()
+        # Close the per-request lag window and emit summary stats via
+        # response headers so the client can capture them alongside
+        # ``cfn_call_timing``.  We don't try to mutate the response body
+        # because the handler has already built and serialised it; headers
+        # are still under our control here.
+        lag_summary = loop_lag_window_stop()
+        if lag_summary:
+            for k, v in lag_summary.items():
+                # Header values must be strings; client side casts back.
+                response.headers[f"x-{k.replace('_', '-')}"] = str(v)
+        return response
 
     app.include_router(api_router, prefix="/api")
 

@@ -176,35 +176,41 @@ async def check_workspace_and_mas(
     workspace_id: str = Path(..., description="Workspace ID"),
     mas_id: str = Path(..., description="Multi-Agentic System ID"),
 ) -> None:
-    if DISABLE_VALIDATION:
-        logger.debug("Skipping Workspace and MAS validation as it is disabled.")
-        return
+    # Stamp dep-resolution latency into the per-request timing bucket.
+    from src.app.api._request_timing import timing_stage
 
-    workspace_url = f"{MGMT_URL}/api/workspaces/{workspace_id}"
-    mas_url = f"{MGMT_URL}/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}"
+    with timing_stage("check_workspace_and_mas_ms"):
+        if DISABLE_VALIDATION:
+            logger.debug("Skipping Workspace and MAS validation as it is disabled.")
+            return
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        await _fetch_resource(
-            client=client,
-            url=workspace_url,
-            not_found_detail=f"Workspace '{workspace_id}' not found. "
-            f"Please visit {MGMT_URL}/api/docs for creating a workspace.",
-            server_error_detail=(
-                f"Internal Server Error while validating workspace: '{workspace_id}'."
-            ),
-            not_found_log=f"Workspace '{workspace_id}' not found",
-            server_error_log=f"Failed to fetch workspace '{workspace_id}'",
-        )
+        workspace_url = f"{MGMT_URL}/api/workspaces/{workspace_id}"
+        mas_url = f"{MGMT_URL}/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}"
 
-        await _fetch_resource(
-            client=client,
-            url=mas_url,
-            not_found_detail=f"MAS '{mas_id}' not found under workspace '{workspace_id}'. "
-            f"Please visit {MGMT_URL}/api/docs for creating a MAS under the workspace.",
-            server_error_detail=(
-                f"Internal Server Error while validating MAS '{mas_id}' "
-                f"under workspace {workspace_id}."
-            ),
-            not_found_log=f"MAS '{mas_id}' not found under workspace '{workspace_id}'",
-            server_error_log=f"Failed to fetch MAS '{mas_id}' under workspace '{workspace_id}'",
-        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            with timing_stage("check_workspace_ms"):
+                await _fetch_resource(
+                    client=client,
+                    url=workspace_url,
+                    not_found_detail=f"Workspace '{workspace_id}' not found. "
+                    f"Please visit {MGMT_URL}/api/docs for creating a workspace.",
+                    server_error_detail=(
+                        f"Internal Server Error while validating workspace: '{workspace_id}'."
+                    ),
+                    not_found_log=f"Workspace '{workspace_id}' not found",
+                    server_error_log=f"Failed to fetch workspace '{workspace_id}'",
+                )
+
+            with timing_stage("check_mas_ms"):
+                await _fetch_resource(
+                    client=client,
+                    url=mas_url,
+                    not_found_detail=f"MAS '{mas_id}' not found under workspace '{workspace_id}'. "
+                    f"Please visit {MGMT_URL}/api/docs for creating a MAS under the workspace.",
+                    server_error_detail=(
+                        f"Internal Server Error while validating MAS '{mas_id}' "
+                        f"under workspace {workspace_id}."
+                    ),
+                    not_found_log=f"MAS '{mas_id}' not found under workspace '{workspace_id}'",
+                    server_error_log=f"Failed to fetch MAS '{mas_id}' under workspace '{workspace_id}'",
+                )
