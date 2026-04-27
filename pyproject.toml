@@ -1,6 +1,6 @@
 [project]
 name = "ioc-cognition-fabric-node-svc"
-version = "0.1.1"
+version = "0.1.2"
 description = "IOC CFN"
 authors = [
     {name = "Outshift by Cisco",email = "outshiftbycisco@cisco.com"}
@@ -13,7 +13,7 @@ dependencies = [
     "dotenv (>=0.9.9,<0.10.0)",
     "httpx>=0.27",
     "ioc-knowledge-memory==0.2.1",
-    "ioc-cfn-cognition-engines==0.1.0"
+    "ioc-cfn-cognition-engines==0.1.2"
 ]
 
 [tool.poetry]
