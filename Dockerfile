@@ -53,8 +53,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# onnx is only required by quantize_dynamic; onnxruntime provides the runtime
-RUN pip install --no-cache-dir onnxruntime onnx
+# onnx is only required by quantize_dynamic; onnxruntime provides the runtime.
+# sympy is a runtime requirement of onnxruntime's symbolic shape inference path
+# (used by quantize_dynamic) but is not declared as a transitive dependency, so
+# it must be installed explicitly or the quantization step fails with
+# ``ImportError: sympy is required for symbolic shape inference``.
+RUN pip install --no-cache-dir onnxruntime onnx sympy
 
 RUN mkdir -p /tmp/fastembed_cache/ibm-granite/granite-embedding-30m-english && \
   cd /tmp/fastembed_cache/ibm-granite/granite-embedding-30m-english && \
