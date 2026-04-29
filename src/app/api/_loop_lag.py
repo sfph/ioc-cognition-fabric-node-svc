@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Background event-loop lag sampler with stack-snapshot on wedge events.
 
 When ``/decide`` requests pile up in uvicorn's accept queue, the underlying
