@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Per-request timing accumulator.
 
 Lets the FastAPI middleware, dependency factories, and route handlers

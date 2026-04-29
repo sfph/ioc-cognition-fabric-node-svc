@@ -9,7 +9,7 @@ IoC Cognition Fabric Node Service in Python.
 - Python **3.11+**
 - [Poetry](https://python-poetry.org/docs/#installation)
 - Docker (optional)
-- [IOC Management Plane Service](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc) is running and reachable
+- [IOC Management Plane Service](https://github.com/outshift-open/ioc-cfn-mgmt-backend-svc) is running and reachable
 
 Verify Poetry is installed:
 
@@ -18,8 +18,6 @@ poetry --version
 ```
 
 ##  Install Dependencies
-
-**First-time setup:** This project uses internal packages from Cisco Artifactory. See [ARTIFACTORY_INSTALLATION_GUIDE.md](ARTIFACTORY_INSTALLATION_GUIDE.md) for credential setup.
 
 From the repository root:
 
@@ -46,7 +44,7 @@ The service loads environment variables from an `env.conf` file located at the r
 
 Example `env.conf`:
 
-> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33) and `ioc-cfn-mgmt-backend-svc` is running and listening to http://localhost:9000.
+> Notes: following configurations assumes the DB is running [with these configurations](https://github.com/outshift-open/ioc-cfn-mgmt-backend-svc/blob/clawbee/docker-compose.yml#L8-L33) and `ioc-cfn-mgmt-backend-svc` is running and listening to http://localhost:9000.
 
 ```bash
 PORT=9002
@@ -74,16 +72,10 @@ make run
 
 ### With Docker
 
-Build with Artifactory credentials:
-
 ```bash
 docker build \
-  --build-arg ARTIFACTORY_USER=YOUR_USERNAME \
-  --build-arg ARTIFACTORY_TOKEN=YOUR_TOKEN \
   -t ioc-cfn:test .
 ```
-
-See [ARTIFACTORY_INSTALLATION_GUIDE.md](ARTIFACTORY_INSTALLATION_GUIDE.md) for setup details.
 
 If IOC Management Plane service is running on Docker, update the env var:
 ```bash
