@@ -1,6 +1,6 @@
 [project]
 name = "ioc-cognition-fabric-node-svc"
-version = "0.1.2"
+version = "0.1.3"
 description = "IOC CFN"
 authors = [
     {name = "Outshift by Cisco",email = "outshiftbycisco@cisco.com"}
