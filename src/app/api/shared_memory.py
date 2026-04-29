@@ -84,18 +84,22 @@ def get_vector_cache_layer_for_mas(
     Returns:
         CachingLayer instance isolated to this mas_id
     """
-    cache = manager.get_cache(mas_id)
-    if cache is None:
-        logger.info(f"Cache miss: Creating new vector cache layer for mas_id={mas_id}")
-        cache = manager.create_cache(
-            cache_id=mas_id,
-            vector_dimension=384,  # granite-embedding-30m-english dimension
-            metric="l2",
-            embed_fn=embed_fn,  # Required for text-based similarity search
-        )
-    else:
-        logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
-    return cache
+    # Stamp dep-resolution latency into the per-request timing bucket.
+    from src.app.api._request_timing import timing_stage
+
+    with timing_stage("vector_cache_layer_ms"):
+        cache = manager.get_cache(mas_id)
+        if cache is None:
+            logger.info(f"Cache miss: Creating new vector cache layer for mas_id={mas_id}")
+            cache = manager.create_cache(
+                cache_id=mas_id,
+                vector_dimension=384,  # granite-embedding-30m-english dimension
+                metric="l2",
+                embed_fn=embed_fn,  # Required for text-based similarity search
+            )
+        else:
+            logger.info(f"Cache hit: Using existing cache for mas_id={mas_id}")
+        return cache
 
 
 def get_rag_cache_layer_for_mas(
@@ -117,18 +121,22 @@ def get_rag_cache_layer_for_mas(
     Returns:
         CachingLayer instance isolated to this mas_id
     """
-    cache = manager.get_cache(mas_id)
-    if cache is None:
-        logger.info(f"Cache miss: Creating new RAG cache layer for mas_id={mas_id}")
-        cache = manager.create_cache(
-            cache_id=mas_id,
-            vector_dimension=384,  # granite-embedding-30m-english dimension
-            metric="l2",
-            embed_fn=embed_fn,  # Required for text-based similarity search
-        )
-    else:
-        logger.info(f"Cache hit: Using existing RAG cache for mas_id={mas_id}")
-    return cache
+    # Stamp dep-resolution latency into the per-request timing bucket.
+    from src.app.api._request_timing import timing_stage
+
+    with timing_stage("rag_cache_layer_ms"):
+        cache = manager.get_cache(mas_id)
+        if cache is None:
+            logger.info(f"Cache miss: Creating new RAG cache layer for mas_id={mas_id}")
+            cache = manager.create_cache(
+                cache_id=mas_id,
+                vector_dimension=384,  # granite-embedding-30m-english dimension
+                metric="l2",
+                embed_fn=embed_fn,  # Required for text-based similarity search
+            )
+        else:
+            logger.info(f"Cache hit: Using existing RAG cache for mas_id={mas_id}")
+        return cache
 
 
 def get_cache_layer_for_query(

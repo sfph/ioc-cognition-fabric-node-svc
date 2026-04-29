@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List, Optional, Dict, Any, Literal
 
 from caching.app.agent import CachingLayer
@@ -204,6 +205,12 @@ async def decide_negotiation(
             ),
         )
 
+    # Stamp wall-clock time around each phase of the handler and attach a
+    # ``_timing`` envelope to the response so callers can localise /decide
+    # latency without log-scraping.  Additive, backwards-compatible: callers
+    # that don't know about ``_timing`` simply ignore it.
+    t0 = time.perf_counter()
+
     try:
         result = await pipeline.async_execute(
             session_id=req.session_id,
@@ -220,6 +227,8 @@ async def decide_negotiation(
         logger.exception("Unhandled error in semantic negotiation execute()")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+    t_pipeline_done = time.perf_counter()
+
     def to_dict(obj):
         if isinstance(obj, dict):
             return {k: to_dict(v) for k, v in obj.items()}
@@ -230,6 +239,8 @@ async def decide_negotiation(
         return obj
 
     converted_result = to_dict(result)
+
+    t_serialised = time.perf_counter()
 
     has_agreement = converted_result.get("status", "") == "agreed"
 
@@ -246,6 +257,35 @@ async def decide_negotiation(
             vector_cache_layer=vector_cache_layer,
             rag_cache_layer=rag_cache_layer,
         )
+
+    # Attach the timing envelope.  Merge (don't overwrite) so any envelope
+    # produced inside the pipeline (e.g. by the engines repo) is preserved.
+    if isinstance(result, dict):
+        timing = result.setdefault("_timing", {})
+        timing["pipeline_ms"] = round((t_pipeline_done - t0) * 1000, 2)
+        timing["to_dict_ms"] = round((t_serialised - t_pipeline_done) * 1000, 2)
+        # Total covers from t0 (post-deps, post-validation) — middleware
+        # adds route_handler_ms separately for the full wall-clock view.
+        timing["pipeline_plus_persist_setup_ms"] = round(
+            (time.perf_counter() - t0) * 1000, 2
+        )
+        # Merge per-stage timings collected by middleware and deps.
+        # Includes route_handler_ms (full middleware-to-here wall-clock)
+        # and individual deps (check_workspace_and_mas_ms,
+        # vector_cache_layer_ms, rag_cache_layer_ms).
+        try:
+            from src.app.api._request_timing import timing_snapshot
+
+            snap = timing_snapshot()
+            req_started = snap.pop("request_started_perf", None)
+            snap.pop("request_finished_perf", None)  # set by middleware after this
+            if req_started is not None:
+                timing["route_handler_ms"] = round(
+                    (time.perf_counter() - req_started) * 1000, 2
+                )
+            timing.update(snap)
+        except Exception:  # never let instrumentation break the call
+            logger.exception("per-request timing snapshot failed")
 
     return result
 
